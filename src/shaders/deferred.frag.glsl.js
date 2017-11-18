@@ -1,10 +1,13 @@
 export default function(params) {
   return `#version 300 es
   precision highp float;
+  precision highp sampler3D;
 
   uniform sampler2D u_lightbuffer;
   
   uniform sampler2D u_gbuffers[${params.numGBuffers}];
+
+  uniform sampler3D u_volBuffer;
   
   in vec2 v_uv;
 
@@ -15,6 +18,11 @@ export default function(params) {
   uniform float u_camN;
   uniform float u_camF;
   uniform vec3 u_camPos;
+
+  uniform float u_time;
+  uniform float u_volSize;
+  //uniform vec3 u_volPos;
+  uniform mat4 u_volTransMat;
 
   out vec4 out_Color;
 
@@ -63,7 +71,38 @@ export default function(params) {
     }
   }
 
+/*
   void main() {
+    out_Color = texture(u_volBuffer, vec3(v_uv,0));
+  }
+*/
+
+  // vec4 getVolCoord(float zoom) {
+  //   //float zoom = 1.0;
+  //   vec2 coordVol = vec2(u_screenW / 2.0, u_screenH / 2.0);
+  //   if(gl_FragCoord.x > coordVol.x - 64.0 * zoom && gl_FragCoord.x < coordVol.x + 64.0 * zoom
+  //     && gl_FragCoord.y > coordVol.y - 64.0 * zoom && gl_FragCoord.y < coordVol.y + 64.0 * zoom) {
+  //       vec2 coord = gl_FragCoord.xy - coordVol.xy + vec2(64.0, 64.0) * zoom;
+  //       // coord.x = u_screenW;
+  //       // coord.y = u_screenH;
+  //       out_Color = texture(u_volBuffer, vec3(coord/128.0 / zoom, u_time/128.0));
+  //   }
+  // }
+
+  void main() {
+    float zoom = 1.0;
+    vec2 coordVol = vec2(u_screenW / 2.0, u_screenH / 2.0);
+    float halfVolSize = u_volSize / 2.0;
+    if(gl_FragCoord.x > coordVol.x - halfVolSize * zoom && gl_FragCoord.x < coordVol.x + halfVolSize * zoom
+      && gl_FragCoord.y > coordVol.y - halfVolSize * zoom && gl_FragCoord.y < coordVol.y + halfVolSize * zoom) {
+        vec2 coord = gl_FragCoord.xy - coordVol.xy + vec2(halfVolSize, halfVolSize) * zoom;
+        out_Color = texture(u_volBuffer, vec3(coord/u_volSize/zoom, u_time/u_volSize));
+        out_Color.xyz = out_Color.xxx;
+    }
+    else {
+
+
+
     // 2 COMPONENT NORMALS:
     // vec4 gb0 = texture(u_gbuffers[0], v_uv);
     // vec4 gb1 = texture(u_gbuffers[1], v_uv);
@@ -96,7 +135,7 @@ export default function(params) {
     int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
 
     // DIRECTIONAL LIGHT - SUN
-    vec3 sunDir = normalize(vec3(1.0, 0.5, 1.0));
+    vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
     vec3 sunCol = vec3(0.5, 0.5, 0.4);
     fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
@@ -138,10 +177,13 @@ export default function(params) {
       fragColor += (albedo + vec3(specular)) * lambertTerm * light.color * vec3(lightIntensity);
     }
 
-    const vec3 ambientLight = vec3(0.025);
-    fragColor += albedo * ambientLight;
+    // const vec3 ambientLight = vec3(0.025);
+    // fragColor += albedo * ambientLight;
 
     out_Color = vec4(fragColor, 1.0);
+    //out_Color = texture(u_volBuffer, vec3(v_uv, 8));
+    //out_Color = texture(u_volBuffer, vec3( v_uv.xy - coordVol.xy + vec2(16.0, 16.0), 8));
+    }
   }
   `;
 }

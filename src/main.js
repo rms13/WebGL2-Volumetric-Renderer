@@ -9,7 +9,7 @@ const CLUSTERED_FORWARD_PLUS = 'Clustered Forward+';
 const CLUSTERED_DEFFERED = 'Clustered Deferred';
 
 const params = {
-  renderer: FORWARD,
+  renderer: CLUSTERED_DEFFERED,
   _renderer: null,
 };
 

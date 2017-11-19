@@ -174,7 +174,7 @@ export default function(params) {
 
       // DIRECTIONAL LIGHT - SUN
       vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
-      vec3 sunCol = vec3(0.5, 0.5, 0.4);
+      vec3 sunCol = 0.5*vec3(0.5, 0.5, 0.4);
       // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
       //-- Naive Volumetric Ray March
@@ -207,7 +207,8 @@ export default function(params) {
       // else if (true) {
       //   fragColor = vec3(0.0, 0.0, 1.0);
       // }
-      // else {
+     // else 
+      {
         float tNear = tValues.x;
         float tFar = tValues.y;
 
@@ -250,9 +251,9 @@ export default function(params) {
         vec4 pos = u_invVolTransMat * vec4(v_position, 1.0);
         vec3 sunDirVol = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
         vec3 normalVol = (u_invTranspVolTransMat * vec4(normal, 0.0)).xyz;
-        fragColor += 0.25*(transmittance(rayOrigin, v_position) *  max(dot(sunDirVol, normalVol), 0.05) * albedo * ambientLight) + fog;      
+        fragColor += (transmittance(rayOrigin, v_position) *  max(dot(sunDirVol, normalVol), 0.05) * albedo * ambientLight) + fog;      
         // fragColor += fog;      
-      // }
+      }
 
       out_Color = vec4(fragColor, 1.0);
       //out_Color = texture(u_volBuffer, vec3(v_uv, 8));

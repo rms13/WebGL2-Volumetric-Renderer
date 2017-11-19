@@ -123,7 +123,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   createVolumeBuffer() {
     // CREATE AND BING THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
-    this.SIZE = 128;
+    this.SIZE = 32;
     var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
     this.data = new Uint8Array(this.SIZE * this.SIZE * this.SIZE);
     for (var k = 0; k < this.SIZE; ++k) {
@@ -135,9 +135,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     }
 
     var volPos = vec3.fromValues(0, 0, 0); // position of the volume
-    var volScale = vec3.fromValues(0.125, .125, .125); // scale of the volume
+    var volScale = vec3.fromValues(0.5, .5, .5); // scale of the volume
     var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
-    quat.fromEuler(volOrient, 0, 45 * Math.PI/180, 0);
+    quat.fromEuler(volOrient, 0.0, 0, 0.0);
 
     this.volTransMat = mat4.create();
     mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);

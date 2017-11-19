@@ -1,20 +1,31 @@
 export default function(params) {
   return `#version 300 es
   precision highp float;
+  precision highp sampler3D;
 
   uniform sampler2D u_lightbuffer;
   
   uniform sampler2D u_gbuffers[${params.numGBuffers}];
+
+  uniform sampler3D u_volBuffer;
   
   in vec2 v_uv;
 
   uniform sampler2D u_clusterbuffer;
   uniform mat4 u_viewMatrix;
+  uniform mat4 u_invViewMatrix;
   uniform float u_screenW;
   uniform float u_screenH;
   uniform float u_camN;
   uniform float u_camF;
   uniform vec3 u_camPos;
+
+  uniform float u_time;
+  uniform float u_volSize;
+  //uniform vec3 u_volPos;
+  uniform mat4 u_volTransMat;
+  uniform mat4 u_invVolTransMat;
+  uniform mat4 u_invTranspVolTransMat;
 
   out vec4 out_Color;
 
@@ -89,70 +100,148 @@ export default function(params) {
     return num / denom;
   }
 
-  void main() {
-    // 2 COMPONENT NORMALS:
-    // vec4 gb0 = texture(u_gbuffers[0], v_uv);
-    // vec4 gb1 = texture(u_gbuffers[1], v_uv);
-    // vec3 v_position = gb0.xyz;
-    // vec3 albedo = gb1.rgb;
-    // vec3 normal = vec3(gb0.w, gb1.w, sqrt(abs(1.0 - gb0.w * gb0.w - gb1.w * gb1.w)));// z2 = 1 - x2 - y2..
+  vec2 intersectCube(vec3 p, vec3 dir)
+  {
+    float tNear = -1000.0;
+    float tFar  = 1000.0;
 
-    // Get position, color, and normal information from G-Buffer
-    vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
-    vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
-    vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
+    float min = -u_volSize / 2.0;
+    float max = u_volSize / 2.0;
 
-    vec3 fragColor = vec3(0.0);
-
-    // DIRECTIONAL LIGHT - SUN
-    vec3 sunDir = normalize(vec3(1.0, 0.5, 1.0));
-    vec3 sunCol = vec3(0.5, 0.5, 0.4);
-    fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
-
-    //-- Naive Volumetric Ray March
-    // Make a ray from the camera to the point in world space.
-    vec3 rayOrigin    = u_camPos;
-    vec3 rayDirection = normalize(v_position - rayOrigin);
-
-    float rayLength = length(v_position - rayOrigin);
-    float stepSize = rayLength / float(NUM_STEPS);
-
-    vec3 step = rayDirection * stepSize;
-
-    // float EXTINCTION = ABSORBTION + SCATTERING;
-    float pmAlbedo = SCATTERING / EXTINCTION;
-
-    vec3 fog = vec3(0.0);
-    for(float i = 0.0; i <= rayLength; i += stepSize) {
-      // Get ray marched point
-      vec3 p = rayOrigin + (i * rayDirection);
-
-      // Find transmittance from camera to ray marched point and add to overall
-      float tr = transmittance(rayOrigin, p);
-
-      // Solve Lscat
-      // TODO: Loop through all the lights
-      // TODO: Check for occlusion
-
-      // Just use the sun as the only light source for now
-      vec3 Li = vec3(0.0);
-      if(dot(normal, sunDir) > 0.0) {
-        Li = sunCol;
+    for(int i = 0; i < 3; i++) {
+      // X-Slab
+      if(dir[i] == 0.0) {
+        if(p[i] < min || p[i] > max) {
+          // miss
+          return vec2(2000.0, 2000.0);
+        }
       }
 
-      vec3 sum = phaseFunction(rayDirection, sunDir, -0.5) * transmittance(rayOrigin, sunDir) * Li;
+      float t0 = (min - p[i]) / dir[i];
+      float t1 = (max - p[i]) / dir[i];
 
-      vec3 Lscat = pmAlbedo * sum;
+      if(t0 > t1) {
+        // swap
+        float t = t0;
+        t0 = t1;
+        t1 = t;
+      }
 
-      // Accumulate 
-      fog += tr * EXTINCTION * Lscat;
+      if(t0 > tNear) {
+        tNear = t0;
+      }
+
+      if(t1 < tFar) {
+        tFar = t1;
+      }
     }
 
-    const vec3 ambientLight = vec3(0.025);
-    fragColor += (transmittance(rayOrigin, v_position) * albedo * ambientLight) + fog;
+    if(tNear > tFar) {
+      // miss 
+      return vec2(2000.0, 2000.0);
+    }
 
-    out_Color = vec4(fragColor, 1.0);
+    return vec2(tNear, tFar);
   }
+
+  void main() {
+    const vec3 ambientLight = vec3(0.025);
+    
+    // float zoom = 1.0;
+    // vec2 coordVol = vec2(u_screenW / 2.0, u_screenH / 2.0);
+    // float halfVolSize = u_volSize / 2.0;
+    // if(gl_FragCoord.x > coordVol.x - halfVolSize * zoom && gl_FragCoord.x < coordVol.x + halfVolSize * zoom
+    //   && gl_FragCoord.y > coordVol.y - halfVolSize * zoom && gl_FragCoord.y < coordVol.y + halfVolSize * zoom) {
+    //     vec2 coord = gl_FragCoord.xy - coordVol.xy + vec2(halfVolSize, halfVolSize) * zoom;
+    //     out_Color = texture(u_volBuffer, vec3(coord/u_volSize/zoom, u_time/u_volSize));
+    //     out_Color.xyz = out_Color.xxx;
+    // }
+    // else {
+
+      // 2 COMPONENT NORMALS:
+      // vec4 gb0 = texture(u_gbuffers[0], v_uv);
+      // vec4 gb1 = texture(u_gbuffers[1], v_uv);
+      // vec3 v_position = gb0.xyz;
+      // vec3 albedo = gb1.rgb;
+      // vec3 normal = vec3(gb0.w, gb1.w, sqrt(abs(1.0 - gb0.w * gb0.w - gb1.w * gb1.w)));// z2 = 1 - x2 - y2..
+
+      // Get position, color, and normal information from G-Buffer
+      vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
+      vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
+      vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
+
+      vec3 fragColor = vec3(0.0);
+
+      // DIRECTIONAL LIGHT - SUN
+      vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
+      vec3 sunCol = vec3(0.5, 0.5, 0.4);
+      // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
+
+      //-- Naive Volumetric Ray March
+      // Make a ray from the camera to the point in world space.
+      vec3 rayOrigin    = u_camPos;
+      vec3 rayDirection = normalize(v_position - rayOrigin);
+
+      // Take the ray to the volumetric cube space
+      vec3 rayOriginVol = (u_invVolTransMat * vec4(rayOrigin, 1.0)).xyz;
+      vec3 rayDirectionVol = (u_invTranspVolTransMat * vec4(rayDirection, 1.0)).xyz;
+
+      vec2 tValues = intersectCube(rayOriginVol, rayDirectionVol);
+      if(tValues.x > 1000.0) {
+        // fragColor += albedo * ambientLight;  
+        out_Color = vec4(fragColor, 1.0);            
+      }
+      else {
+        float tNear = tValues.x;
+        float tFar = tValues.y;
+
+        // float rayLength = length(rayDirectionVol);
+        float rayLength = tFar - tNear;
+        rayDirectionVol = normalize(rayDirectionVol);
+  
+        float stepSize = rayLength / float(NUM_STEPS);
+  
+        float pmAlbedo = SCATTERING / EXTINCTION;
+  
+        vec3 fog = vec3(0.0);
+        for(float i = tNear; i <= tFar; i += stepSize) {
+          // Get ray marched point
+          vec3 p = rayOrigin + (i * rayDirection);
+  
+          // Find transmittance from camera to ray marched point and add to overall
+          float tr = transmittance(rayOrigin, p);
+  
+          // Solve Lscat
+          // TODO: Loop through all the lights
+          // TODO: Check for occlusion
+  
+          // Just use the sun as the only light source for now
+          vec3 Li = vec3(0.0);
+          sunDir = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
+          if(dot(normal, sunDir) > 0.0) {
+            Li = sunCol;
+          }
+  
+          vec3 sum = phaseFunction(rayDirection, sunDir, -0.5) * transmittance(rayOrigin, sunDir) * Li;
+  
+          vec3 Lscat = pmAlbedo * sum;
+  
+          // Accumulate 
+          fog += tr * EXTINCTION * Lscat;
+        }
+
+
+
+        vec4 pos = u_invVolTransMat * vec4(v_position, 1.0);
+        // fragColor += (transmittance(rayOriginVol, pos.xyz) * albedo * ambientLight) + fog;      
+        fragColor += fog;      
+      }
+
+      out_Color = vec4(fragColor, 1.0);
+      //out_Color = texture(u_volBuffer, vec3(v_uv, 8));
+      //out_Color = texture(u_volBuffer, vec3( v_uv.xy - coordVol.xy + vec2(16.0, 16.0), 8));
+    }
+  // }
 
   // void main() {
   //   // 2 COMPONENT NORMALS:

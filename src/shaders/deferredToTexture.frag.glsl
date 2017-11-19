@@ -5,6 +5,7 @@ uniform sampler2D u_colmap;
 uniform sampler2D u_normap;
 
 uniform mat4 u_viewMatrix;
+uniform mat4 u_invViewMatrix;
 
 in vec3 v_position;
 in vec3 v_normal;

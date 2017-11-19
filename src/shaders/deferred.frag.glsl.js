@@ -35,7 +35,7 @@ export default function(params) {
   #define DENSITY 0.5
   #define PI 3.14159265
 
-  #define NUM_STEPS 100 
+  #define NUM_STEPS 100
 
   struct Light {
     vec3 position;
@@ -180,23 +180,39 @@ export default function(params) {
       //-- Naive Volumetric Ray March
       // Make a ray from the camera to the point in world space.
       vec3 rayOrigin    = u_camPos;
-      vec3 rayDirection = normalize(v_position - rayOrigin);
+      vec3 rayDirection = (v_position - rayOrigin);
+      float len = length(rayDirection);
+
+      //if(albedo.x != 0.0 && albedo.y != 0.0 && albedo.z != 0.0) {
+
+      
+
+      rayDirection = normalize(rayDirection);
 
       // Take the ray to the volumetric cube space
       vec3 rayOriginVol = (u_invVolTransMat * vec4(rayOrigin, 1.0)).xyz;
       vec3 rayDirectionVol = (u_invTranspVolTransMat * vec4(rayDirection, 1.0)).xyz;
 
       vec2 tValues = intersectCube(rayOriginVol, rayDirectionVol);
-      if(tValues.x > 1000.0) {
-        // fragColor += albedo * ambientLight;  
-        out_Color = vec4(fragColor, 1.0);            
-      }
-      else {
+      
+      // if(tValues.x > 1000.0) {
+      //   // fragColor += albedo * ambientLight;  
+      //   fragColor = vec3(0.0, 1.0, 0.0);
+      //   //out_Color = vec4(fragColor, 1.0);            
+      // }
+      // else if (true/* && tValues.x>-u_volSize / 2.0 && tValues.x<u_volSize / 2.0 && tValues.y>-u_volSize / 2.0 && tValues.y<u_volSize / 2.0*/) {
+      //   // fragColor = vec3(1.0, 0.0, 0.0);
+      //   fragColor = vec3(1.0, 0.0,0.0);
+      // }
+      // else if (true) {
+      //   fragColor = vec3(0.0, 0.0, 1.0);
+      // }
+      // else {
         float tNear = tValues.x;
         float tFar = tValues.y;
 
         // float rayLength = length(rayDirectionVol);
-        float rayLength = tFar - tNear;
+        float rayLength = abs(tFar - tNear);
         rayDirectionVol = normalize(rayDirectionVol);
   
         float stepSize = rayLength / float(NUM_STEPS);
@@ -204,12 +220,12 @@ export default function(params) {
         float pmAlbedo = SCATTERING / EXTINCTION;
   
         vec3 fog = vec3(0.0);
-        for(float i = tNear; i <= tFar; i += stepSize) {
+        for(float i = tNear; i <= rayLength && i <= tFar; i += stepSize) {
           // Get ray marched point
-          vec3 p = rayOrigin + (i * rayDirection);
+          vec3 p = rayOriginVol + (i * rayDirectionVol);
   
           // Find transmittance from camera to ray marched point and add to overall
-          float tr = transmittance(rayOrigin, p);
+          float tr = transmittance(rayOriginVol, p);
   
           // Solve Lscat
           // TODO: Loop through all the lights
@@ -217,12 +233,13 @@ export default function(params) {
   
           // Just use the sun as the only light source for now
           vec3 Li = vec3(0.0);
-          sunDir = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
-          if(dot(normal, sunDir) > 0.0) {
-            Li = sunCol;
+          vec3 sunDirVol = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
+          vec3 normalVol = (u_invTranspVolTransMat * vec4(normal, 0.0)).xyz; 
+          if(dot(normalVol, sunDirVol) > 0.0) {
+            Li = sunCol ;//* max(dot(sunDirVol, normalVol), 0.05);
           }
   
-          vec3 sum = phaseFunction(rayDirection, sunDir, -0.5) * transmittance(rayOrigin, sunDir) * Li;
+          vec3 sum = phaseFunction(rayDirectionVol, sunDirVol, -0.5) * transmittance(rayOriginVol, sunDirVol) * Li;
   
           vec3 Lscat = pmAlbedo * sum;
   
@@ -230,16 +247,24 @@ export default function(params) {
           fog += tr * EXTINCTION * Lscat;
         }
 
-
-
         vec4 pos = u_invVolTransMat * vec4(v_position, 1.0);
-        // fragColor += (transmittance(rayOriginVol, pos.xyz) * albedo * ambientLight) + fog;      
-        fragColor += fog;      
-      }
+        vec3 sunDirVol = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
+        vec3 normalVol = (u_invTranspVolTransMat * vec4(normal, 0.0)).xyz;
+        fragColor += 0.25*(transmittance(rayOrigin, v_position) *  max(dot(sunDirVol, normalVol), 0.05) * albedo * ambientLight) + fog;      
+        // fragColor += fog;      
+      // }
 
       out_Color = vec4(fragColor, 1.0);
       //out_Color = texture(u_volBuffer, vec3(v_uv, 8));
       //out_Color = texture(u_volBuffer, vec3( v_uv.xy - coordVol.xy + vec2(16.0, 16.0), 8));
+
+
+      // if(fract(v_position.x)<0.1) {
+      //   out_Color = vec4(1.0, 0.0,0.0,0.0);
+      // }
+
+
+    //} // end len>0.00001
     }
   // }
 

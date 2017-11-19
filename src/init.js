@@ -1,5 +1,5 @@
 // TODO: Change this to enable / disable debug mode
-export const DEBUG = false && process.env.NODE_ENV === 'development';
+export const DEBUG = true && process.env.NODE_ENV === 'development';
 
 import DAT from 'dat-gui';
 import WebGLDebug from 'webgl-debug';
@@ -53,7 +53,7 @@ stats.domElement.style.top = '0px';
 document.body.appendChild(stats.domElement);
 
 // Initialize camera
-export const camera = new PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 50);
+export const camera = new PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 100);
 
 // Initialize camera controls
 export const cameraControls = new OrbitControls(camera, canvas);

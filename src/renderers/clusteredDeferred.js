@@ -10,6 +10,8 @@ import fsSource from '../shaders/deferred.frag.glsl.js';
 import TextureBuffer from './textureBuffer';
 import ClusteredRenderer from './clustered';
 
+import noise3D from '../noise.js';
+
 export const NUM_GBUFFERS = 3;
 
 export default class ClusteredDeferredRenderer extends ClusteredRenderer {
@@ -122,13 +124,23 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   createVolumeBuffer() {
     // CREATE AND BING THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
-    this.SIZE = 128;
+    console.log("creating volume texture..");
+    this.SIZE = 32;
     var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
-    this.data = new Uint8Array(this.SIZE * this.SIZE * this.SIZE);
+    this.data = new Uint8Array(3 * this.SIZE * this.SIZE * this.SIZE);
+    var ctr=0;
     for (var k = 0; k < this.SIZE; ++k) {
       for (var j = 0; j < this.SIZE; ++j) {
         for (var i = 0; i < this.SIZE; ++i) {
-          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
+          var index = i + j * this.SIZE + k * this.SIZE * this.SIZE;
+          index /= max;
+          //this.data[index] = [];
+          let p = vec3.fromValues(i*4, j*4, k*4);
+          let r = vec3.fromValues(this.SIZE, this.SIZE, this.SIZE);
+          var n = noise3D(p, r, 'fbm3d') * 255;//Math.random() * 255.0;
+          this.data[ctr++] = n;//, Math.random() * 255.0, Math.random() * 255.0];//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
+          this.data[ctr++] = n;
+          this.data[ctr++] = n;
         }
       }
     }
@@ -151,17 +163,19 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.texImage3D(
       gl.TEXTURE_3D,  // target
       0,              // level
-      gl.R8,        // internalformat
+      gl.RGB8,        // internalformat
       this.SIZE,           // width
       this.SIZE,           // height
       this.SIZE,           // depth
       0,              // border
-      gl.RED,         // format
+      gl.RGB,         // format
       gl.UNSIGNED_BYTE,       // type
       this.data            // pixel
     );
     gl.generateMipmap(gl.TEXTURE_3D);
     gl.bindTexture(gl.TEXTURE_3D, null);
+
+    console.log("..volume texture created");
     // gl.uniform1i(this._shaderProgram.u_volBuffer, 0);
     // END: CREATE 3D-TEXTURE
   }

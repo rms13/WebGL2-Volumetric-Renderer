@@ -90,14 +90,14 @@ export default function(params) {
   // }
 
   void main() {
-    float zoom = 1.0;
+    float zoom = 8.0;
     vec2 coordVol = vec2(u_screenW / 2.0, u_screenH / 2.0);
     float halfVolSize = u_volSize / 2.0;
     if(gl_FragCoord.x > coordVol.x - halfVolSize * zoom && gl_FragCoord.x < coordVol.x + halfVolSize * zoom
       && gl_FragCoord.y > coordVol.y - halfVolSize * zoom && gl_FragCoord.y < coordVol.y + halfVolSize * zoom) {
         vec2 coord = gl_FragCoord.xy - coordVol.xy + vec2(halfVolSize, halfVolSize) * zoom;
-        out_Color = texture(u_volBuffer, vec3(coord/u_volSize/zoom, u_time/u_volSize));
-        out_Color.xyz = out_Color.xxx;
+        out_Color = texture(u_volBuffer, vec3(coord/u_volSize/zoom, 1.0 * u_time/u_volSize/zoom));
+        //out_Color.xyz = out_Color.xxx;
     }
     else {
 

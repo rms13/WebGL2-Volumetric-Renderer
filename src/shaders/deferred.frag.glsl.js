@@ -158,116 +158,102 @@ export default function(params) {
     // }
     // else {
 
-      // 2 COMPONENT NORMALS:
-      // vec4 gb0 = texture(u_gbuffers[0], v_uv);
-      // vec4 gb1 = texture(u_gbuffers[1], v_uv);
-      // vec3 v_position = gb0.xyz;
-      // vec3 albedo = gb1.rgb;
-      // vec3 normal = vec3(gb0.w, gb1.w, sqrt(abs(1.0 - gb0.w * gb0.w - gb1.w * gb1.w)));// z2 = 1 - x2 - y2..
+    // 2 COMPONENT NORMALS:
+    // vec4 gb0 = texture(u_gbuffers[0], v_uv);
+    // vec4 gb1 = texture(u_gbuffers[1], v_uv);
+    // vec3 v_position = gb0.xyz;
+    // vec3 albedo = gb1.rgb;
+    // vec3 normal = vec3(gb0.w, gb1.w, sqrt(abs(1.0 - gb0.w * gb0.w - gb1.w * gb1.w)));// z2 = 1 - x2 - y2..
 
-      // Get position, color, and normal information from G-Buffer
-      vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
-      vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
-      vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
+    // Get position, color, and normal information from G-Buffer
+    vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
+    vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
+    vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
 
-      vec3 fragColor = vec3(0.0);
+    vec3 posVol = (u_invVolTransMat * vec4(v_position, 1.0)).xyz;
 
-      // DIRECTIONAL LIGHT - SUN
-      vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
-      vec3 sunCol = 0.5*vec3(0.5, 0.5, 0.4);
-      // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
+    vec3 fragColor = vec3(0.0);
 
-      //-- Naive Volumetric Ray March
-      // Make a ray from the camera to the point in world space.
-      vec3 rayOrigin    = u_camPos;
-      vec3 rayDirection = (v_position - rayOrigin);
-      float len = length(rayDirection);
+    // DIRECTIONAL LIGHT - SUN
+    vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
+    vec3 sunCol = 0.5*vec3(0.5, 0.5, 0.4);
+    // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
-      //if(albedo.x != 0.0 && albedo.y != 0.0 && albedo.z != 0.0) {
+    //-- Naive Volumetric Ray March
+    // Make a ray from the camera to the point in world space.
+    vec3 rayOrigin    = u_camPos;
+    vec3 rayDirection = (v_position - rayOrigin);
+    float len = length(rayDirection);
 
+    rayDirection = normalize(rayDirection);
+
+    // Take the ray to the volumetric cube space
+    vec3 rayOriginVol = (u_invVolTransMat * vec4(rayOrigin, 1.0)).xyz;
+    vec3 rayDirectionVol = (u_invTranspVolTransMat * vec4(rayDirection, 1.0)).xyz;
+
+    vec2 tValues = intersectCube(rayOriginVol, rayDirectionVol);
       
+    float tNear = tValues.x;
+    float tFar = tValues.y;
 
-      rayDirection = normalize(rayDirection);
+    // float rayLength = length(rayDirectionVol);
+    float rayLength = abs(tFar - tNear);
+    rayDirectionVol = normalize(rayDirectionVol);
 
-      // Take the ray to the volumetric cube space
-      vec3 rayOriginVol = (u_invVolTransMat * vec4(rayOrigin, 1.0)).xyz;
-      vec3 rayDirectionVol = (u_invTranspVolTransMat * vec4(rayDirection, 1.0)).xyz;
+    float stepSize = rayLength / float(NUM_STEPS);
 
-      vec2 tValues = intersectCube(rayOriginVol, rayDirectionVol);
-      
-      // if(tValues.x > 1000.0) {
-      //   // fragColor += albedo * ambientLight;  
-      //   fragColor = vec3(0.0, 1.0, 0.0);
-      //   //out_Color = vec4(fragColor, 1.0);            
-      // }
-      // else if (true/* && tValues.x>-u_volSize / 2.0 && tValues.x<u_volSize / 2.0 && tValues.y>-u_volSize / 2.0 && tValues.y<u_volSize / 2.0*/) {
-      //   // fragColor = vec3(1.0, 0.0, 0.0);
-      //   fragColor = vec3(1.0, 0.0,0.0);
-      // }
-      // else if (true) {
-      //   fragColor = vec3(0.0, 0.0, 1.0);
-      // }
-     // else 
-      {
-        float tNear = tValues.x;
-        float tFar = tValues.y;
+    float pmAlbedo = SCATTERING / EXTINCTION;
 
-        // float rayLength = length(rayDirectionVol);
-        float rayLength = abs(tFar - tNear);
-        rayDirectionVol = normalize(rayDirectionVol);
-  
-        float stepSize = rayLength / float(NUM_STEPS);
-  
-        float pmAlbedo = SCATTERING / EXTINCTION;
-  
-        vec3 fog = vec3(0.0);
-        for(float i = tNear; i <= rayLength && i <= tFar; i += stepSize) {
-          // Get ray marched point
-          vec3 p = rayOriginVol + (i * rayDirectionVol);
-  
-          // Find transmittance from camera to ray marched point and add to overall
-          float tr = transmittance(rayOriginVol, p);
-  
-          // Solve Lscat
-          // TODO: Loop through all the lights
-          // TODO: Check for occlusion
-  
-          // Just use the sun as the only light source for now
-          vec3 Li = vec3(0.0);
-          vec3 sunDirVol = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
-          vec3 normalVol = (u_invTranspVolTransMat * vec4(normal, 0.0)).xyz; 
-          if(dot(normalVol, sunDirVol) > 0.0) {
-            Li = sunCol ;//* max(dot(sunDirVol, normalVol), 0.05);
-          }
-  
-          vec3 sum = phaseFunction(rayDirectionVol, sunDirVol, -0.5) * transmittance(rayOriginVol, sunDirVol) * Li;
-  
-          vec3 Lscat = pmAlbedo * sum;
-  
-          // Accumulate 
-          fog += tr * EXTINCTION * Lscat;
-        }
+    vec3 fog = vec3(0.0);
+    for(float i = tNear; i <= rayLength && i <= tFar; i += stepSize) {
+      // Get ray marched point
+      vec3 p = rayOriginVol + (i * rayDirectionVol);
 
-        vec4 pos = u_invVolTransMat * vec4(v_position, 1.0);
-        vec3 sunDirVol = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
-        vec3 normalVol = (u_invTranspVolTransMat * vec4(normal, 0.0)).xyz;
-        fragColor += (transmittance(rayOrigin, v_position) *  max(dot(sunDirVol, normalVol), 0.05) * albedo * ambientLight) + fog;      
-        // fragColor += fog;      
+      // Find transmittance from camera to ray marched point and add to overall
+      float tr = transmittance(rayOriginVol, p);
+
+      // Solve Lscat
+      // TODO: Loop through all the lights
+      // TODO: Check for occlusion
+      vec3 normalVol = (u_invTranspVolTransMat * vec4(normal, 0.0)).xyz; 
+      vec3 sum = vec3(0.0);
+      for (int i = 0; i < ${params.numLights}; ++i) {
+        Light light = UnpackLight(i);
+
+        vec3 lightPosVol = (u_invVolTransMat * vec4(light.position, 1.0)).xyz;
+        float lightDistance = distance(lightPosVol, posVol);
+        vec3 L = (lightPosVol - posVol) / lightDistance;
+  
+        float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
+        float lambertTerm = max(dot(L, normalVol), 0.0);
+  
+        fragColor += albedo * lambertTerm * light.color * vec3(lightIntensity);
+        sum += phaseFunction(rayDirectionVol, L, -0.5) * transmittance(rayOriginVol, L) * albedo * lambertTerm * light.color * vec3(lightIntensity);
       }
 
-      out_Color = vec4(fragColor, 1.0);
-      //out_Color = texture(u_volBuffer, vec3(v_uv, 8));
-      //out_Color = texture(u_volBuffer, vec3( v_uv.xy - coordVol.xy + vec2(16.0, 16.0), 8));
-
-
-      // if(fract(v_position.x)<0.1) {
-      //   out_Color = vec4(1.0, 0.0,0.0,0.0);
+      // Just use the sun as the only light source for now
+      // vec3 Li = vec3(0.0);
+      // vec3 sunDirVol = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
+      // if(dot(normalVol, sunDirVol) > 0.0) {
+      //   Li = sunCol ;//* max(dot(sunDirVol, normalVol), 0.05);
       // }
 
+      // vec3 sum = phaseFunction(rayDirectionVol, sunDirVol, -0.5) * transmittance(rayOriginVol, sunDirVol) * Li;
 
-    //} // end len>0.00001
+      vec3 Lscat = pmAlbedo * sum;
+
+      // Accumulate 
+      fog += tr * EXTINCTION * Lscat ;
     }
-  // }
+
+    vec4 pos = u_invVolTransMat * vec4(v_position, 1.0);
+    vec3 sunDirVol = vec3(u_invTranspVolTransMat * vec4(sunDir, 1.0));
+    vec3 normalVol = (u_invTranspVolTransMat * vec4(normal, 0.0)).xyz;
+    fragColor += (transmittance(rayOrigin, v_position) *  max(dot(sunDirVol, normalVol), 0.05) * ambientLight) + fog;      
+
+    out_Color = vec4(fragColor, 1.0);
+    //} // end len>0.00001
+  }
 
   // void main() {
   //   // 2 COMPONENT NORMALS:

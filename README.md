@@ -4,6 +4,7 @@ A WebGL 2.0 based Volumetric Renderer based on [Frostbite's Physically Based Vol
 # Development Blog
 
 ## 11/20 - Milestone 1
+[Link to Milestone Presentation](https://docs.google.com/presentation/d/1uzm42jYGMUiYdBnvM8cXamCGwLEN59TKImay_TON58w/edit?usp=sharing)
 
 ![](images/milestone1/textureFog.png)
 
@@ -15,6 +16,7 @@ For this milestone we simply generated a texture to ray march through. At each p
 ![](images/sponza.png)
 
 #### *Texture Creation*
+![](images/milestone1/texture.png)
 
 #### *Ray Marched Scene*
 ![](images/milestone1/foggySponza.png)

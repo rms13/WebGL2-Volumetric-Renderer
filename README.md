@@ -1,5 +1,28 @@
-# WebGL2-Volumetric-Renderer
+# Heatstroke
 A WebGL 2.0 based Volumetric Renderer based on [Frostbite's Physically Based Volumetric Renderer](https://www.ea.com/frostbite/news/physically-based-unified-volumetric-rendering-in-frostbite).
+
+# Development Blog
+
+## 11/20 - Milestone 1
+[Link to Milestone Presentation](https://docs.google.com/presentation/d/1uzm42jYGMUiYdBnvM8cXamCGwLEN59TKImay_TON58w/edit?usp=sharing)
+
+![](images/milestone1/textureFog.png)
+
+For this milestone we simply generated a texture to ray march through. At each point we first cheked to see if we're in the volume. If we are then we solve the lighting equation with participating media. 
+
+### Progression 
+
+#### *Original Sponza Scene*
+![](images/sponza.png)
+
+#### *Texture Creation*
+![](images/milestone1/texture.png)
+
+#### *Ray Marched Scene*
+![](images/milestone1/foggySponza.png)
+
+#### *Ray Marched Cube*
+![](images/milestone1/textureFog.png)
 
 # References
 - [Physically-based & Unified Volumetric Rendering](https://www.ea.com/frostbite/news/physically-based-unified-volumetric-rendering-in-frostbite)

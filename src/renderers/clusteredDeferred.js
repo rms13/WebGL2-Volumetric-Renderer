@@ -6,7 +6,7 @@ import { MAX_LIGHTS_PER_CLUSTER } from './clustered';
 import toTextureVert from '../shaders/deferredToTexture.vert.glsl';
 import toTextureFrag from '../shaders/deferredToTexture.frag.glsl';
 import QuadVertSource from '../shaders/quad.vert.glsl';
-import fsSource from '../shaders/deferred.frag.glsl.js';
+import fsSource from '../shaders/vol_deferred.frag.glsl.js';
 import TextureBuffer from './textureBuffer';
 import ClusteredRenderer from './clustered';
 
@@ -42,7 +42,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     }), {
       uniforms: ['u_gbuffers[0]', 'u_gbuffers[1]', 'u_gbuffers[2]', 'u_lightbuffer', 'u_clusterbuffer', 'u_viewMatrix', 'u_invViewMatrix', 'u_screenW', 'u_screenH', 'u_camN', 'u_camF', 'u_camPos',
         'u_volBuffer', 'u_time', 'u_volSize', 'u_volTransMat', 'u_invVolTransMat', 'u_invTranspVolTransMat' /*'u_volPos', 'u_volOrient'*/],
-      attribs: ['a_uv']
+      attribs: ['a_position']
     });
 
     this._projectionMatrix = mat4.create();
@@ -123,21 +123,21 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   createVolumeBuffer() {
     // CREATE AND BING THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
-    this.SIZE = 32;
+    this.SIZE = 8;
     var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
     this.data = new Uint8Array(this.SIZE * this.SIZE * this.SIZE);
     for (var k = 0; k < this.SIZE; ++k) {
       for (var j = 0; j < this.SIZE; ++j) {
         for (var i = 0; i < this.SIZE; ++i) {
-          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
+          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = 255;//Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
         }
       }
     }
 
-    var volPos = vec3.fromValues(0, 0, 0); // position of the volume
-    var volScale = vec3.fromValues(0.5, .5, .5); // scale of the volume
+    var volPos = vec3.fromValues(0, -4, 0); // position of the volume
+    var volScale = vec3.fromValues(1, 1, 1); // scale of the volume
     var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
-    quat.fromEuler(volOrient, 0.0, 0, 0.0);
+    quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
 
     this.volTransMat = mat4.create();
     mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);

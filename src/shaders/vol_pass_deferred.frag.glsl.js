@@ -3,13 +3,9 @@ export default function(params) {
   precision highp float;
   precision highp sampler3D;
 
-  #define USEPASS 1
-
   uniform sampler2D u_lightbuffer;
   
   uniform sampler2D u_gbuffers[${params.numGBuffers}];
-
-  uniform sampler2D u_volPassBuffer;
 
   uniform sampler3D u_volBuffer;
   
@@ -159,9 +155,8 @@ export default function(params) {
 
     // Get position, color, and normal information from G-Buffer
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
-    vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
+    //vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
-    vec3 volCol = texture(u_volPassBuffer, v_uv).xyz;
 
     //albedo = vec3(0.98,0.98,0.98);
 
@@ -176,10 +171,6 @@ export default function(params) {
     vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
     vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
 
-    float transmittance = 1.0;
-    vec3 scatteredLight = vec3(0.0);
-
-  #if !USEPASS
     //-- Naive Volumetric Ray March
     // Make a ray from the camera to the point in world space.
     vec3 rayOrigin    = u_camPos;
@@ -211,6 +202,9 @@ export default function(params) {
     float muA = 0.05; // attenuation
     vec3 p = vec3(0.0, 0.0, 0.0);
 
+    float transmittance = 1.0;
+    vec3 scatteredLight = vec3(0.0);
+
     for(float i = 1.0; i <= len; i += stepSize) {
       // Get ray marched point
       vec3 p = rayOriginVol + (i * rayDirectionVol);
@@ -237,28 +231,20 @@ export default function(params) {
       // scatteredLight += muS * Li * phaseFunction() * transmittance;// * stepSize;
     }
 
-  #endif
+    // vec3 L = (u_volTransMat * vec4((lightPos - v_position), 1.0)).xyz;
+    // float distL = length(L);
+    // vec3 lightDir = L / (distL);
+    // vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
+    // vec3 Li = max(0.0, dot(normalVol, lightDir)) * lightCol / (distL * distL);
 
-    vec3 L = (u_volTransMat * vec4((lightPos - v_position), 1.0)).xyz;
-    float distL = length(L);
-    vec3 lightDir = L / (distL);
-    vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
-    vec3 Li = max(0.0, dot(normalVol, lightDir)) * lightCol / (distL * distL);
+    // fragColor = (albedo/3.14) * Li;
+    // fragColor *= transmittance;
+    // fragColor += scatteredLight;
 
-    fragColor = (albedo/3.14) * Li;
+    //// gamma correct
+    // fragColor = pow(fragColor, vec3(1.0/2.2));
 
-  #if !USEPASS
-    fragColor *= transmittance;
-    fragColor += scatteredLight;
-  #else
-    vec4 volTexSample = texture(u_volPassBuffer, v_uv);
-    //fragColor *= volTexSample.w;
-    fragColor += volTexSample.xyz;
-  #endif
-
-    // gamma correct
-    fragColor = pow(fragColor, vec3(1.0/2.2));
-    out_Color = vec4(fragColor.xyz, 1.0);
+    out_Color = vec4(scatteredLight, 1.0);
   }
   `;
 }

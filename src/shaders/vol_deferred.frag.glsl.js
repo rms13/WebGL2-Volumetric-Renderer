@@ -251,9 +251,28 @@ export default function(params) {
     fragColor *= transmittance;
     fragColor += scatteredLight;
   #else
-    vec4 volTexSample = texture(u_volPassBuffer, v_uv);
-    //fragColor *= volTexSample.w;
-    fragColor += volTexSample.xyz;
+    // int div = 4;
+    // int step = div;
+    // vec2 intCoord = ivec2(floor(v_uv.x * 0.25 * u_screenW), floor(v_uv.y * 0.25 * u_screenH));
+    // vec2 actualCoord = ivec2(floor(v_uv.x * u_screenW), floor(v_uv.y * u_screenH));
+    // float minCoordX = intCoord.x % 4.0;
+    // float minCoordY = intCoord.y % 4.0;
+    // float maxCoordX = 4 - minCoordX;
+    // float maxCoordY = 4 - minCoordY;
+    // vec2 coord = texture(u_volPassBuffer, v_uv * 0.25);
+
+    // float right = left + step;
+    // float left = v_uv.x * u_screenW;
+    // float left = v_uv.x * u_screenW;
+    float divW = 1.0/u_screenW;
+    float divH = 1.0/u_screenH;
+    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv);
+    vec4 volTexSample01 = texture(u_volPassBuffer, vec2(v_uv.x, v_uv.y + divH));
+    vec4 volTexSample10 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y));
+    vec4 volTexSample11 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y + divH));
+    vec4 volTexSample = (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * 0.25;
+    fragColor *= volTexSample00.w;
+    fragColor += volTexSample00.xyz;
   #endif
 
     // gamma correct

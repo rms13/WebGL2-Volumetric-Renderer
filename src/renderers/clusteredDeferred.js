@@ -135,7 +135,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width/4, height/4, 0, gl.RGBA, gl.FLOAT, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     this._fboVolPass = gl.createFramebuffer();
@@ -146,9 +146,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       throw "Framebuffer incomplete";
     }
 
-    gl.drawBuffers([
-        gl.COLOR_ATTACHMENT0
-    ]);
+    // gl.drawBuffers([
+    //     gl.COLOR_ATTACHMENT0
+    // ]);
     // gl.drawBuffers([
     //   gl.COLOR_ATTACHMENT0,
     //   gl.COLOR_ATTACHMENT1,
@@ -227,7 +227,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     // volume pass..
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width/4, height/4, 0, gl.RGBA, gl.FLOAT, null);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
@@ -289,7 +289,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
 
     // volume pass..
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    gl.viewport(0, 0, canvas.width/4, canvas.height/4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
     //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
@@ -346,8 +346,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
     gl.uniform1i(this._progVolPass.u_volBuffer, 5);
 
-    //renderFullscreenQuad(this._progVolPass);
-    scene.draw(this._progVolPass);
+    renderFullscreenQuad(this._progVolPass);
+    //scene.draw(this._progVolPass);
 
 
 
@@ -355,6 +355,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
 
     // Bind the default null framebuffer which is the screen
+    gl.viewport(0, 0, canvas.width, canvas.height);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     // Clear the frame

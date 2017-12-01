@@ -244,7 +244,7 @@ export default function(params) {
     //// gamma correct
     // fragColor = pow(fragColor, vec3(1.0/2.2));
 
-    out_Color = vec4(scatteredLight, 1.0);
+    out_Color = vec4(scatteredLight, transmittance);
   }
   `;
 }

@@ -10,14 +10,19 @@ export default function(params) {
   uniform sampler2D u_gbuffers[${params.numGBuffers}];
 
   uniform sampler2D u_volPassBuffer;
+  uniform sampler2D u_shadowMap;
 
   uniform sampler3D u_volBuffer;
   
   in vec2 v_uv;
 
   uniform sampler2D u_clusterbuffer;
+
   uniform mat4 u_viewMatrix;
   uniform mat4 u_invViewMatrix;
+  uniform mat4 u_viewProjectionMatrix;
+  uniform mat4 u_viewProjectionMatrixLight;
+
   uniform float u_screenW;
   uniform float u_screenH;
   uniform float u_camN;
@@ -162,6 +167,7 @@ export default function(params) {
     vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
     vec3 volCol = texture(u_volPassBuffer, v_uv).xyz;
+    vec3 shadowMap = texture(u_shadowMap, v_uv).xyz;
 
     //albedo = vec3(0.98,0.98,0.98);
 
@@ -173,7 +179,8 @@ export default function(params) {
     // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
     //point light
-    vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
+    // vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
+    vec3 lightPos = vec3(0.0, 8.0, 0.0);
     vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
 
     float transmittance = 1.0;
@@ -247,14 +254,14 @@ export default function(params) {
 
     fragColor = (albedo/3.14) * Li;
 
-  #if !USEPASS
-    fragColor *= transmittance;
-    fragColor += scatteredLight;
-  #else
-    vec4 volTexSample = texture(u_volPassBuffer, v_uv);
-    //fragColor *= volTexSample.w;
-    fragColor += volTexSample.xyz;
-  #endif
+  // #if !USEPASS
+  //   fragColor *= transmittance;
+  //   fragColor += scatteredLight;
+  // #else
+  //   vec4 volTexSample = texture(u_shadowMap, v_uv);
+  //   //fragColor *= volTexSample.w;
+  //   fragColor += volTexSample.xyz;
+  // #endif
 
     // gamma correct
     fragColor = pow(fragColor, vec3(1.0/2.2));

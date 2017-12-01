@@ -43,7 +43,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_gbuffers[1]', 
                   'u_gbuffers[2]', 
                   'u_viewMatrix', 
-                  'u_invViewMatrix'
+                  'u_invViewMatrix',
+                  'u_viewProjectionMatrix'
                 ],
       attribs: ['a_position']
     });
@@ -65,16 +66,43 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       numGBuffers: NUM_GBUFFERS,
       xSlices: xSlices, ySlices: ySlices, zSlices: zSlices,
     }), {
-      uniforms: ['u_gbuffers[0]', 'u_gbuffers[1]', 'u_gbuffers[2]', 'u_lightbuffer', 'u_clusterbuffer', 'u_viewMatrix', 'u_invViewMatrix', 'u_screenW', 'u_screenH', 'u_camN', 'u_camF', 'u_camPos',
-        'u_volBuffer', 'u_time', 'u_volSize', 'u_volTransMat', 'u_invVolTransMat', 'u_invTranspVolTransMat',
-        'u_volPassBuffer'],
-      attribs: ['a_position']
+      uniforms: [ 'u_gbuffers[0]', 
+                  'u_gbuffers[1]', 
+                  'u_gbuffers[2]', 
+                  'u_lightbuffer', 
+                  'u_clusterbuffer', 
+                  'u_viewMatrix', 
+                  'u_invViewMatrix', 
+                  'u_screenW', 
+                  'u_screenH', 
+                  'u_camN', 
+                  'u_camF', 
+                  'u_camPos',
+                  'u_time', 
+                  'u_volBuffer', 
+                  'u_volSize', 
+                  'u_volTransMat', 
+                  'u_invVolTransMat', 
+                  'u_invTranspVolTransMat',
+                  'u_volPassBuffer',
+                  'u_shadowMap',
+                  'u_vieProjectionMatrixLight',
+                  'u_viewProjectionMatrix'
+                ],
+      attribs:  [ 'a_position'  ]
     });
 
-    this._projectionMatrix = mat4.create();
-    this._viewMatrix = mat4.create();
-    this._invViewMatrix = mat4.create();
-    this._viewProjectionMatrix = mat4.create();
+    this._projectionMatrix          = mat4.create();
+    this._viewMatrix                = mat4.create();
+    this._invViewMatrix             = mat4.create();
+    this._viewProjectionMatrix      = mat4.create();
+    this._invViewProjectionMatrix   = mat4.create();
+
+    // View Projection for the Light
+    this._projectionMatrixLight      = mat4.create();
+    this._viewMatrixLight            = mat4.create();
+    this._invViewMatrixLight         = mat4.create();
+    this._viewProjectionMatrixLight  = mat4.create();
   }
 
   setupDrawBuffers(width, height) {
@@ -155,44 +183,16 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._fboShadowMapPass = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);
-    
+
+
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
       throw "Framebuffer incomplete";
     }
 
-    // Volume Pass..
-    // this._volPassTex = gl.createTexture();
-    // gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
-    // gl.bindTexture(gl.TEXTURE_2D, null);
+    gl.drawBuffers([
+      gl.COLOR_ATTACHMENT0
+    ]);
 
-    // this._fboVolPass = gl.createFramebuffer();
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
-    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._volPassTex, 0);
-
-    // this._fboVolPass = gl.createFramebuffer();
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
-    // gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);
-    
-    // if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
-    //   throw "Framebuffer incomplete";
-    // }
-
-    // gl.drawBuffers([
-    //     gl.COLOR_ATTACHMENT0
-    // ]);
-    // gl.drawBuffers([
-    //   gl.COLOR_ATTACHMENT0,
-    //   gl.COLOR_ATTACHMENT1,
-    //   gl.COLOR_ATTACHMENT2,
-    //   gl.COLOR_ATTACHMENT3
-    // ]);
-
-    //gl.drawBuffers(gl.COLOR_ATTACHMENT0);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
@@ -263,10 +263,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
 
-    // volume pass..
-    // gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    // gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
-
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
@@ -280,9 +276,21 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     mat4.invert(this._viewMatrix, camera.matrixWorld.elements);
     mat4.copy(this._projectionMatrix, camera.projectionMatrix.elements);
     mat4.multiply(this._viewProjectionMatrix, this._projectionMatrix, this._viewMatrix);
-
     mat4.invert(this._invViewMatrix, this._viewMatrix);
+    mat4.invert(this._invViewProjectionMatrix, this._viewProjectionMatrix);
 
+    // Update the light matrices
+    // This will have to be changed to be dynamic
+    mat4.perspective(this._viewProjectionMatrixLight, 70.0, canvas.width / canvas.height, 1.0, 200.0);
+    mat4.lookAt(this._viewProjectionMatrixLight,    
+                vec3.fromValues(0.0, 8.0, 0.0),
+                vec3.fromValues(0.0, 0.0, 0.0),
+                vec3.fromValues(0.0, 1.0, 0.0));
+
+
+    //--------------------------------------------------  
+    // Create texture to hold g-buffers
+    //--------------------------------------------------              
     // Render to the whole screen
     gl.viewport(0, 0, canvas.width, canvas.height);
     // Bind the framebuffer
@@ -299,214 +307,120 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     scene.draw(this._progCopy);
 
 
-
-    //-- Create shadow map
-    // gl.viewport(0, 0, canvas.width, canvas.height);
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMap);
-    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // gl.useProgram(this._progShadow.glShaderProgram);
-    
-    // scene.draw(this._progShadow);
-    // renderFullscreenQuad(this._progShadow);
-
-
+    //--------------------------------------------------  
+    // Create shadow map
+    //--------------------------------------------------  
+    // Render to the whole screen
     gl.viewport(0, 0, canvas.width, canvas.height);
+    // Bind the framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
-    //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
     // Clear the frame
     gl.clear(gl.COLOR_BUFFER_BIT);
-
     // Use this shader program
     gl.useProgram(this._progShadowMap.glShaderProgram);
+    // Bind any uniform variables
+    gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
 
-    // TODO: Bind any other shader inputs
-    gl.uniformMatrix4fv(this._progShadowMap.u_viewMatrix, false, this._viewMatrix);
-    gl.uniformMatrix4fv(this._progShadowMap.u_invViewMatrix, false, this._invViewMatrix);    
-    
-    // Bind g-buffers
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-    gl.uniform1i(this._progShadowMap[`u_gbuffers[0]`], 0);
-
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-    gl.uniform1i(this._progShadowMap[`u_gbuffers[1]`], 1);
-
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-    gl.uniform1i(this._progShadowMap[`u_gbuffers[2]`], 2);
-
+    // scene.draw(this._progShadowMap);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     renderFullscreenQuad(this._progShadowMap);
 
 
 
 
-    for (let i = 0; i < NUM_LIGHTS; ++i) {
-      this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 0] = scene.lights[i].position[0];
-      this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 1] = scene.lights[i].position[1];
-      this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 2] = scene.lights[i].position[2];
-      this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 3] = scene.lights[i].radius;
-
-      this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 1) + 0] = scene.lights[i].color[0];
-      this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 1) + 1] = scene.lights[i].color[1];
-      this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 1) + 2] = scene.lights[i].color[2];
-    }
-    // Update the light texture
-    this._lightTexture.update();
-
-    // Update the clusters for the frame
-    this.updateClustersOptimized(camera, this._viewMatrix, scene);
 
 
+    // for (let i = 0; i < NUM_LIGHTS; ++i) {
+    //   this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 0] = scene.lights[i].position[0];
+    //   this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 1] = scene.lights[i].position[1];
+    //   this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 2] = scene.lights[i].position[2];
+    //   this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 3] = scene.lights[i].radius;
 
+    //   this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 1) + 0] = scene.lights[i].color[0];
+    //   this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 1) + 1] = scene.lights[i].color[1];
+    //   this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 1) + 2] = scene.lights[i].color[2];
+    // }
+    // // Update the light texture
+    // this._lightTexture.update();
 
+    // // Update the clusters for the frame
+    // this.updateClustersOptimized(camera, this._viewMatrix, scene);
 
-
-    // volume pass..
-    // gl.viewport(0, 0, canvas.width, canvas.height);
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
-    // //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // // Bind the default null framebuffer which is the screen
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 
     // // Clear the frame
-    // gl.clear(gl.COLOR_BUFFER_BIT);
+    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // // Use this shader program
-    // gl.useProgram(this._progVolPass.glShaderProgram);
+    // gl.useProgram(this._progShade.glShaderProgram);
 
     // // TODO: Bind any other shader inputs
-    // gl.uniformMatrix4fv(this._progVolPass.u_viewMatrix, false, this._viewMatrix);
-    // gl.uniformMatrix4fv(this._progVolPass.u_invViewMatrix, false, this._invViewMatrix);    
-    // gl.uniform1f(this._progVolPass.u_screenW, canvas.width);
-    // gl.uniform1f(this._progVolPass.u_screenH, canvas.height);
-    // gl.uniform1f(this._progVolPass.u_camN, camera.near);
-    // gl.uniform1f(this._progVolPass.u_camF, camera.far);
-    // gl.uniform3f(this._progVolPass.u_camPos, camera.position.x, camera.position.y, camera.position.z);
+    // gl.uniformMatrix4fv(this._progShade.u_viewMatrix, false, this._viewMatrix);
+    // gl.uniformMatrix4fv(this._progShade.u_invViewMatrix, false, this._invViewMatrix);
+    // gl.uniform1f(this._progShade.u_screenW, canvas.width);
+    // gl.uniform1f(this._progShade.u_screenH, canvas.height);
+    // gl.uniform1f(this._progShade.u_camN, camera.near);
+    // gl.uniform1f(this._progShade.u_camF, camera.far);
+    // gl.uniform3f(this._progShade.u_camPos, camera.position.x, camera.position.y, camera.position.z);
     
-    // gl.uniform1f(this._progVolPass.u_volSize, this.SIZE);
+    // gl.uniform1f(this._progShade.u_volSize, this.SIZE);
     // // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-    // gl.uniformMatrix4fv(this._progVolPass.u_volTransMat, false, this.volTransMat);
-    // gl.uniformMatrix4fv(this._progVolPass.u_invVolTransMat, false, this.invVolTransMat);
-    // gl.uniformMatrix4fv(this._progVolPass.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
+    // gl.uniformMatrix4fv(this._progShade.u_volTransMat, false, this.volTransMat);
+    // gl.uniformMatrix4fv(this._progShade.u_invVolTransMat, false, this.invVolTransMat);
+    // gl.uniformMatrix4fv(this._progShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
 
-    // if(this.framenum === undefined) this.framenum = 0.0;
-    // this.framenum+=0.05;
-    // gl.uniform1f(this._progVolPass.u_time, this.framenum);
+    // // if(this.framenum === undefined) this.framenum = 0.0;
+    // // this.framenum+=0.05;
+    // gl.uniform1f(this._progShade.u_time, this.framenum);
+    // // if(this.t0 === undefined) {
+    // //   this.t0 = performance.now();
+    // //   gl.uniform1f(this._progShade.u_time, 0);
+    // // }
+    // // else {
+    // //   t1 = performance.now();
+    // //   gl.uniform1f(this._progShade.u_time, t1 - t0);
+    // // }
+    // // this.t0 = this.t1;
 
     // // Bind g-buffers
     // gl.activeTexture(gl.TEXTURE0);
     // gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-    // gl.uniform1i(this._progVolPass[`u_gbuffers[0]`], 0);
+    // gl.uniform1i(this._progShade[`u_gbuffers[0]`], 0);
 
     // gl.activeTexture(gl.TEXTURE1);
     // gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-    // gl.uniform1i(this._progVolPass[`u_gbuffers[1]`], 1);
+    // gl.uniform1i(this._progShade[`u_gbuffers[1]`], 1);
 
     // gl.activeTexture(gl.TEXTURE2);
     // gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-    // gl.uniform1i(this._progVolPass[`u_gbuffers[2]`], 2);
+    // gl.uniform1i(this._progShade[`u_gbuffers[2]`], 2);
 
-    // // Set the light texture as a uniform input to the shader
+    // // bind volume pass texture
+    // // gl.activeTexture(gl.TEXTURE3);
+    // // gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
+    // // gl.uniform1i(this._progShade[`u_volPassBuffer`], 3);
+
     // gl.activeTexture(gl.TEXTURE3);
+    // gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
+    // gl.uniform1i(this._progShade[`u_shadowMap`], 3);
+
+    // // Bind the light and cluster textures...
+    // // Set the light texture as a uniform input to the shader
+    // gl.activeTexture(gl.TEXTURE4);
     // gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
-    // gl.uniform1i(this._progVolPass.u_lightbuffer, 3);
+    // gl.uniform1i(this._progShade.u_lightbuffer, 4);
 
     // // Set the cluster texture as a uniform input to the shader
-    // gl.activeTexture(gl.TEXTURE4);
-    // gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
-    // gl.uniform1i(this._progVolPass.u_clusterbuffer, 4);
-
     // gl.activeTexture(gl.TEXTURE5);
+    // gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
+    // gl.uniform1i(this._progShade.u_clusterbuffer, 5);
+
+    // // bind 3d volume texture
+    // gl.activeTexture(gl.TEXTURE6);
     // gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
-    // gl.uniform1i(this._progVolPass.u_volBuffer, 5);
+    // gl.uniform1i(this._progShade.u_volBuffer, 6);
 
-    // renderFullscreenQuad(this._progVolPass);
-    // // scene.draw(this._progVolPass);
-
-
-
-   
-
-
-
-
-
-
-    // Bind the default null framebuffer which is the screen
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
-    // Clear the frame
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    // Use this shader program
-    gl.useProgram(this._progShade.glShaderProgram);
-
-    // TODO: Bind any other shader inputs
-    gl.uniformMatrix4fv(this._progShade.u_viewMatrix, false, this._viewMatrix);
-    gl.uniformMatrix4fv(this._progShade.u_invViewMatrix, false, this._invViewMatrix);
-    gl.uniform1f(this._progShade.u_screenW, canvas.width);
-    gl.uniform1f(this._progShade.u_screenH, canvas.height);
-    gl.uniform1f(this._progShade.u_camN, camera.near);
-    gl.uniform1f(this._progShade.u_camF, camera.far);
-    gl.uniform3f(this._progShade.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-    
-    gl.uniform1f(this._progShade.u_volSize, this.SIZE);
-    // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-    gl.uniformMatrix4fv(this._progShade.u_volTransMat, false, this.volTransMat);
-    gl.uniformMatrix4fv(this._progShade.u_invVolTransMat, false, this.invVolTransMat);
-    gl.uniformMatrix4fv(this._progShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
-
-    // if(this.framenum === undefined) this.framenum = 0.0;
-    // this.framenum+=0.05;
-    gl.uniform1f(this._progShade.u_time, this.framenum);
-    // if(this.t0 === undefined) {
-    //   this.t0 = performance.now();
-    //   gl.uniform1f(this._progShade.u_time, 0);
-    // }
-    // else {
-    //   t1 = performance.now();
-    //   gl.uniform1f(this._progShade.u_time, t1 - t0);
-    // }
-    // this.t0 = this.t1;
-
-    // Bind g-buffers
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-    gl.uniform1i(this._progShade[`u_gbuffers[0]`], 0);
-
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-    gl.uniform1i(this._progShade[`u_gbuffers[1]`], 1);
-
-    gl.activeTexture(gl.TEXTURE2);
-    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-    gl.uniform1i(this._progShade[`u_gbuffers[2]`], 2);
-
-    // bind volume pass texture
-    // gl.activeTexture(gl.TEXTURE3);
-    // gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    // gl.uniform1i(this._progShade[`u_volPassBuffer`], 3);
-
-    gl.activeTexture(gl.TEXTURE3);
-    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-    gl.uniform1i(this._progShade[`u_volPassBuffer`], 3);
-
-    // Bind the light and cluster textures...
-    // Set the light texture as a uniform input to the shader
-    gl.activeTexture(gl.TEXTURE4);
-    gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
-    gl.uniform1i(this._progShade.u_lightbuffer, 4);
-
-    // Set the cluster texture as a uniform input to the shader
-    gl.activeTexture(gl.TEXTURE5);
-    gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
-    gl.uniform1i(this._progShade.u_clusterbuffer, 5);
-
-    // bind 3d volume texture
-    gl.activeTexture(gl.TEXTURE6);
-    gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
-    gl.uniform1i(this._progShade.u_volBuffer, 6);
-
-    renderFullscreenQuad(this._progShade);
+    // renderFullscreenQuad(this._progShade);
   }
 };

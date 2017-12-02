@@ -24,6 +24,8 @@ export default function(params) {
   uniform mat4 u_invViewMatrix;
   uniform mat4 u_viewProjectionMatrix;
   uniform mat4 u_viewProjectionMatrixLight;
+  uniform mat4 u_lightViewProjectionMatrix;
+  
 
   uniform float u_screenW;
   uniform float u_screenH;
@@ -57,10 +59,16 @@ export default function(params) {
     vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
     vec3 volCol = texture(u_volPassBuffer, v_uv).xyz;
 
-    vec3 shadowCoord = (v_pos.xyz/v_pos.w)/2.0 + 0.5;
+    vec4 vv_lightPosition = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
+    vec4 vv_lightDir = normalize(vec4(0.0,0.0,0.0,1.0) - vec4(0.5, 4, 0.4, 1.0));
+    float dotprod = dot(vv_lightDir.xyz, normal);
+    vec3 shadowCoord = (vv_lightPosition.xyz/vv_lightPosition.w)/2.0 + 0.5;
+
     vec4 rgbaDepth = texture(u_shadowMap, shadowCoord.xy);
     float depth = rgbaDepth.r; // Retrieve the z-value from R
-    float visibility = (shadowCoord.z > depth) ? 0.7 : 1.0;
+    float visibility = (shadowCoord.z > depth+0.005)? 0.3 : 1.0;
+    // out_Color = vec4(shadowCoord, 1.0);
+    albedo *= 10.0 * vec3(1.0,1.0,1.0) * max(dot(vv_lightDir.xyz, normal), 0.05);
     out_Color = vec4(albedo * visibility, 1.0);
   }
 

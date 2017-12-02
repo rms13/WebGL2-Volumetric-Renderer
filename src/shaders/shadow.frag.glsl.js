@@ -18,14 +18,15 @@ export default function(params) {
                                     1.0 / 256.0, 
                                     1.0 / 256.0, 
                                     0.0);
-
+ 
         // Calculate the value stored into each byte
-        vec4 rgbaDepth = vec4(fract(v_position.z ));
+        vec4 rgbaDepth = fract(v_position.z * bitShift);
 
         // Cut off the value which do not fit in 8 bits
-        // rgbaDepth -= rgbaDepth.gbaa ;
+        rgbaDepth -= rgbaDepth.gbaa * bitShift;
 
         // Store the depth into the shadow map
+        // out_Color = rgbaDepth;
         out_Color = vec4(gl_FragCoord.z, 0.0,0.0,1.0);
         // out_Color = vec4(1.0, 0.0, 0.0, 1.0);
     }

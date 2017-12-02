@@ -83,7 +83,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_invTranspVolTransMat',
                   'u_volPassBuffer',
                   'u_shadowMap',
-                  'u_vieProjectionMatrixLight',
+                  'u_lightViewProjectionMatrix',
                   'u_viewProjectionMatrix'
                 ],
       attribs:  [ 'a_position'  ]
@@ -112,7 +112,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightProjectionMatrix = mat4.create();
     this._lightViewMatrix = mat4.create();
     mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 200);
-    mat4.lookAt(this._lightViewMatrix, vec3.fromValues(1,4,1), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
+    mat4.lookAt(this._lightViewMatrix, vec3.fromValues(.5,4,.5), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
     mat4.multiply(this._lightViewProjectionMatrix, this._lightProjectionMatrix, this._lightViewMatrix);
     // mat4.perspective(this._lightViewProjectionMatrix, 70.0, 1, 1.0, 200.0);
     // mat4.lookAt(this._lightViewProjectionMatrix, dirLightPos, vec3.fromValues(0.0,0.0,0.0), vec3.fromValues(0.0,1.0,0.0));

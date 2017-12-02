@@ -14,6 +14,8 @@ export default function(params) {
 
   uniform sampler3D u_volBuffer;
   
+  in vec4 v_pos;
+  in vec4 v_lightPosition;
   in vec2 v_uv;
 
   uniform sampler2D u_clusterbuffer;
@@ -54,15 +56,12 @@ export default function(params) {
     vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
     vec3 volCol = texture(u_volPassBuffer, v_uv).xyz;
-    vec3 shadowMap = texture(u_shadowMap, v_uv).xyz;
 
-    // DIRECTIONAL LIGHT - SUN
-    // vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
-    // vec3 sunCol = vec3(0.5, 0.5, 0.4);
-    // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
-
-    // fragColor = pow(fragColor, vec3(1.0/2.2));
-    out_Color = vec4(albedo, 1.0);
+    vec3 shadowCoord = (v_pos.xyz/v_pos.w)/2.0 + 0.5;
+    vec4 rgbaDepth = texture(u_shadowMap, shadowCoord.xy);
+    float depth = rgbaDepth.r; // Retrieve the z-value from R
+    float visibility = (shadowCoord.z > depth) ? 0.7 : 1.0;
+    out_Color = vec4(albedo * visibility, 1.0);
   }
 
   // struct Light {

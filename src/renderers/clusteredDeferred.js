@@ -130,14 +130,30 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     // Volume Pass..
     this._volPassTex = gl.createTexture();
+    // var img = new Uint8Array(width * height);
+    // for (var k = 0; k < width; ++k) {
+    //   for (var j = 0; j < height; ++j) {
+    //     this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = 0;//Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
+    //   }
+    // }
+    //this._volPassTex.generateMipmaps = false;
+    // this._volPassTex.minFilter = THREE.LinearFilter;
+    // this._volPassTex.magFilter = THREE.LinearFilter;
+    //gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width/4, height/4, 0, gl.RGBA, gl.FLOAT, null);
+    this.w = (width % 8);
+    this.w += width;
+    this.h = (height % 8);
+    this.h += height;
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
-
+    
     this._fboVolPass = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._volPassTex, 0);
@@ -227,7 +243,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     // volume pass..
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width/4, height/4, 0, gl.RGBA, gl.FLOAT, null);
+    this.w = (width % 8);
+    this.w += width;
+    this.h = (height % 8);
+    this.h += height;
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
   }

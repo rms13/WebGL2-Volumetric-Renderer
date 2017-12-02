@@ -264,13 +264,13 @@ export default function(params) {
     // float right = left + step;
     // float left = v_uv.x * u_screenW;
     // float left = v_uv.x * u_screenW;
-    float divW = 1.0/u_screenW;
-    float divH = 1.0/u_screenH;
-    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv);
-    vec4 volTexSample01 = texture(u_volPassBuffer, vec2(v_uv.x, v_uv.y + divH));
-    vec4 volTexSample10 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y));
-    vec4 volTexSample11 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y + divH));
-    vec4 volTexSample = (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * 0.25;
+    float divW = 1.0/(u_screenW*0.25);
+    float divH = 1.0/(u_screenH*0.25);
+    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv*0.25);
+    // vec4 volTexSample01 = texture(u_volPassBuffer, vec2(v_uv.x, v_uv.y + divH));
+    // vec4 volTexSample10 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y));
+    // vec4 volTexSample11 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y + divH));
+    // vec4 volTexSample = (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * 0.25;
     fragColor *= volTexSample00.w;
     fragColor += volTexSample00.xyz;
   #endif

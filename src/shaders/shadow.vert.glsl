@@ -14,9 +14,9 @@ out vec3 color;
 
 void main() 
 {
-    gl_Position = vec4(a_position, 1.0);
+    gl_Position = u_viewProjectionMatrix * vec4(a_position, 1.0);
 
-    // color = a_position;
+    color = a_position;
 
     // gl_Position = u_viewProjectionMatrix * vec4(a_position, 1.0);
     

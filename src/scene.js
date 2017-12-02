@@ -134,6 +134,10 @@ class Scene {
           var posInfo = primitive.attributes[primitive.technique.parameters['position'].semantic];
           var norInfo = primitive.attributes[primitive.technique.parameters['normal'].semantic];
           var uvInfo = primitive.attributes[primitive.technique.parameters['texcoord_0'].semantic];
+          
+          var modelViewInfo = primitive.attributes[primitive.technique.parameters['modelViewMatrix'].semantic];
+          var normalMatrix = primitive.attributes[primitive.technique.parameters['normalMatrix'].semantic];
+          var projectionInfo = primitive.attributes[primitive.technique.parameters['projectionMatrix'].semantic];
 
           this.models.push({
             gltf: primitive,

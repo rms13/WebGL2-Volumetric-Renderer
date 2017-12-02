@@ -220,26 +220,31 @@
                 "diffuse": {
                     "type": 35666
                 },
-                "modelViewMatrix": {
-                    "semantic": "MODELVIEW",
+               
+                
+
+                "projectionMatrix": {
+                    "semantic": "PROJECTION",
                     "type": 35676
-                },
-                "normal": {
-                    "semantic": "NORMAL",
-                    "type": 35665
                 },
                 "normalMatrix": {
                     "semantic": "MODELVIEWINVERSETRANSPOSE",
                     "type": 35675
                 },
+                "modelViewMatrix": {
+                    "semantic": "MODELVIEW",
+                    "type": 35676
+                },
                 "position": {
                     "semantic": "POSITION",
                     "type": 35665
                 },
-                "projectionMatrix": {
-                    "semantic": "PROJECTION",
-                    "type": 35676
+                "normal": {
+                    "semantic": "NORMAL",
+                    "type": 35665
                 },
+                
+                
                 "shininess": {
                     "type": 5126
                 },

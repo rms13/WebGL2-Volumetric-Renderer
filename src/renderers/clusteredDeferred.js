@@ -26,7 +26,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightTexture = new TextureBuffer(NUM_LIGHTS, 8);
 
     // Create a 3D texture to store volume
-    this.createVolumeBuffer();
+    // this.createVolumeBuffer();
 
     this._progShadowMap = loadShaderProgram(shadowVert, shadowFrag({
       numLights: NUM_LIGHTS,
@@ -96,7 +96,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._invViewProjectionMatrix   = mat4.create();
 
     // View Projection for the Light
-    var dirLightPos     = vec3.fromValues(0, -4, 0); 
+    var dirLightPos     = vec3.fromValues(0, 8, 0); 
     var dirLightScale   = vec3.fromValues(1, 1, 1); 
     var dirLightOrient  = quat.create(); 
     quat.fromEuler(dirLightOrient, 0.0, 0.0, 0.0);
@@ -107,6 +107,15 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     mat4.invert(this.invdirLightTransMat, this.dirLightTransMat);    
     this.invTranspDirLightTransMat = mat4.create();
     mat4.transpose(this.invTranspDirLightTransMat, this.invdirLightTransMat);
+
+    this._lightViewProjectionMatrix = mat4.create();
+    this._lightProjectionMatrix = mat4.create();
+    this._lightViewMatrix = mat4.create();
+    mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 200);
+    mat4.lookAt(this._lightViewMatrix, vec3.fromValues(1,4,1), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
+    mat4.multiply(this._lightViewProjectionMatrix, this._lightProjectionMatrix, this._lightViewMatrix);
+    // mat4.perspective(this._lightViewProjectionMatrix, 70.0, 1, 1.0, 200.0);
+    // mat4.lookAt(this._lightViewProjectionMatrix, dirLightPos, vec3.fromValues(0.0,0.0,0.0), vec3.fromValues(0.0,1.0,0.0));
   }
 
   setupDrawBuffers(width, height) {
@@ -145,9 +154,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       throw "Framebuffer incomplete";
     }
  
-     gl.drawBuffers([
-       gl.COLOR_ATTACHMENT0
-     ]);
+    gl.drawBuffers([
+      gl.COLOR_ATTACHMENT0
+    ]);
 
     this._fbo = gl.createFramebuffer();    
 
@@ -298,13 +307,14 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     // Update the light matrices
     // This will have to be changed to be dynamic
+    
     // mat4.perspective(this._viewProjectionMatrixLight, 70.0, canvas.width / canvas.height, 1.0, 200.0);
     // mat4.lookAt(this._viewProjectionMatrixLight,    
     //             vec3.fromValues(0.0, 8.0, 0.0),
     //             vec3.fromValues(0.0, 0.0, 0.0),
     //             vec3.fromValues(0.0, 1.0, 0.0));
 
-
+                
     //--------------------------------------------------  
     // Create shadow map
     //--------------------------------------------------  
@@ -313,11 +323,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Bind the framebuffer
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
     // Clear the frame
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // Use this shader program
     gl.useProgram(this._progShadowMap.glShaderProgram);
     // Bind any uniform variables
-    gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this.dirLightTransMat);
+    gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this._lightViewProjectionMatrix);
 
     scene.draw(this._progShadowMap);
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -325,25 +335,25 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
 
 
-
     //--------------------------------------------------  
     // Create texture to hold g-buffers
     //--------------------------------------------------              
     // Render to the whole screen
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    // Bind the framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
-    // Clear the frame
+    // gl.viewport(0, 0, canvas.width, canvas.height);
+    // // Bind the framebuffer
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
+    // // Clear the frame
     // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // Use the shader program to copy to the draw buffers
-    gl.useProgram(this._progCopy.glShaderProgram);
-    // Upload the camera matrix
-    gl.uniformMatrix4fv(this._progCopy.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-    // view matrix
-    gl.uniformMatrix4fv(this._progCopy.u_viewMatrix, false, this._viewMatrix);
-    // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
+    // // Use the shader program to copy to the draw buffers
+    // gl.useProgram(this._progCopy.glShaderProgram);
+    // // Upload the camera matrix
+    // gl.uniformMatrix4fv(this._progCopy.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    // // view matrix
+    // gl.uniformMatrix4fv(this._progCopy.u_viewMatrix, false, this._viewMatrix);
+    // // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
     // scene.draw(this._progCopy);
-
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // renderFullscreenQuad(this._progShadowMap);
 
     
 
@@ -386,11 +396,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // gl.uniform1f(this._progShade.u_camF, camera.far);
     // gl.uniform3f(this._progShade.u_camPos, camera.position.x, camera.position.y, camera.position.z);
     
-    // gl.uniform1f(this._progShade.u_volSize, this.SIZE);
-    // // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-    // gl.uniformMatrix4fv(this._progShade.u_volTransMat, false, this.volTransMat);
-    // gl.uniformMatrix4fv(this._progShade.u_invVolTransMat, false, this.invVolTransMat);
-    // gl.uniformMatrix4fv(this._progShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
+    // // gl.uniform1f(this._progShade.u_volSize, this.SIZE);
+    // // // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
+    // // gl.uniformMatrix4fv(this._progShade.u_volTransMat, false, this.volTransMat);
+    // // gl.uniformMatrix4fv(this._progShade.u_invVolTransMat, false, this.invVolTransMat);
+    // // gl.uniformMatrix4fv(this._progShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
 
     // // if(this.framenum === undefined) this.framenum = 0.0;
     // // this.framenum+=0.05;

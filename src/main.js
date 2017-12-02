@@ -33,6 +33,7 @@ gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
+// scene.loadGLTF('models/box/box.gltf');
 
 camera.position.set(-10, 8, 0);
 cameraControls.target.set(0, 2, 0);

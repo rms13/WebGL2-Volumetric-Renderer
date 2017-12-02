@@ -34,8 +34,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       numGBuffers: NUM_GBUFFERS,
       xSlices: xSlices, ySlices: ySlices, zSlices: zSlices,
     }), {
-      uniforms: [ 'u_viewMatrix', 
-                  'u_invViewMatrix',
+      uniforms: [ //'u_viewMatrix', 
+                  //'u_invViewMatrix',
                   'u_viewProjectionMatrix'
                 ],
       attribs: ['a_position']
@@ -123,7 +123,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._height = height;
     
     this._fboShadowMapPass = gl.createFramebuffer();
-    
+    var w = 1024;
+    var h = 1024;
     //Create, bind, and store a depth target texture for the FBO
     this._shadowDepthTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._shadowDepthTex);
@@ -131,7 +132,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16/*gl.DEPTH_COMPONENT*/, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16/*gl.DEPTH_COMPONENT*/, w, h, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
@@ -144,7 +145,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);

@@ -28,25 +28,22 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Create a 3D texture to store volume
     this.createVolumeBuffer();
 
-    this._progCopy = loadShaderProgram(toTextureVert, toTextureFrag, {
-      uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap', 'u_viewMatrix'],
-      attribs: ['a_position', 'a_normal', 'a_uv']
-    });
-
     this._progShadowMap = loadShaderProgram(shadowVert, shadowFrag({
       numLights: NUM_LIGHTS,
       maxLights: MAX_LIGHTS_PER_CLUSTER,
       numGBuffers: NUM_GBUFFERS,
       xSlices: xSlices, ySlices: ySlices, zSlices: zSlices,
     }), {
-      uniforms: [ 'u_gbuffers[0]', 
-                  'u_gbuffers[1]', 
-                  'u_gbuffers[2]', 
-                  'u_viewMatrix', 
+      uniforms: [ 'u_viewMatrix', 
                   'u_invViewMatrix',
                   'u_viewProjectionMatrix'
                 ],
       attribs: ['a_position']
+    });
+
+    this._progCopy = loadShaderProgram(toTextureVert, toTextureFrag, {
+      uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap', 'u_viewMatrix'],
+      attribs: ['a_position', 'a_normal', 'a_uv']
     });
 
     // this._progVolPass = loadShaderProgram(shadowVert, shadowFrag({
@@ -99,18 +96,61 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._invViewProjectionMatrix   = mat4.create();
 
     // View Projection for the Light
-    this._projectionMatrixLight      = mat4.create();
-    this._viewMatrixLight            = mat4.create();
-    this._invViewMatrixLight         = mat4.create();
-    this._viewProjectionMatrixLight  = mat4.create();
+    var dirLightPos     = vec3.fromValues(0, -4, 0); 
+    var dirLightScale   = vec3.fromValues(1, 1, 1); 
+    var dirLightOrient  = quat.create(); 
+    quat.fromEuler(dirLightOrient, 0.0, 0.0, 0.0);
+
+    this.dirLightTransMat = mat4.create();
+    mat4.fromRotationTranslationScale(this.dirLightTransMat, dirLightOrient, dirLightPos, dirLightScale);
+    this.invdirLightTransMat = mat4.create();
+    mat4.invert(this.invdirLightTransMat, this.dirLightTransMat);    
+    this.invTranspDirLightTransMat = mat4.create();
+    mat4.transpose(this.invTranspDirLightTransMat, this.invdirLightTransMat);
   }
 
   setupDrawBuffers(width, height) {
     this._width = width;
     this._height = height;
-
-    this._fbo = gl.createFramebuffer();
     
+    this._fboShadowMapPass = gl.createFramebuffer();
+    
+    //Create, bind, and store a depth target texture for the FBO
+    this._shadowDepthTex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this._shadowDepthTex);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16/*gl.DEPTH_COMPONENT*/, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this._shadowDepthTex, 0);
+
+    // Shadow Map
+    this._shadowMapTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);
+
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
+      throw "Framebuffer incomplete";
+    }
+ 
+     gl.drawBuffers([
+       gl.COLOR_ATTACHMENT0
+     ]);
+
+    this._fbo = gl.createFramebuffer();    
+
     //Create, bind, and store a depth target texture for the FBO
     this._depthTex = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._depthTex);
@@ -168,29 +208,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       gl.COLOR_ATTACHMENT0,
       gl.COLOR_ATTACHMENT1,
       gl.COLOR_ATTACHMENT2
-    ]);
-
-    // Shadow Map
-    this._shadowMapTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
-    gl.bindTexture(gl.TEXTURE_2D, null);
-
-    this._fboShadowMapPass = gl.createFramebuffer();
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);
-
-
-    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
-      throw "Framebuffer incomplete";
-    }
-
-    gl.drawBuffers([
-      gl.COLOR_ATTACHMENT0
     ]);
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -281,30 +298,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     // Update the light matrices
     // This will have to be changed to be dynamic
-    mat4.perspective(this._viewProjectionMatrixLight, 70.0, canvas.width / canvas.height, 1.0, 200.0);
-    mat4.lookAt(this._viewProjectionMatrixLight,    
-                vec3.fromValues(0.0, 8.0, 0.0),
-                vec3.fromValues(0.0, 0.0, 0.0),
-                vec3.fromValues(0.0, 1.0, 0.0));
-
-
-    //--------------------------------------------------  
-    // Create texture to hold g-buffers
-    //--------------------------------------------------              
-    // Render to the whole screen
-    gl.viewport(0, 0, canvas.width, canvas.height);
-    // Bind the framebuffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
-    // Clear the frame
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // Use the shader program to copy to the draw buffers
-    gl.useProgram(this._progCopy.glShaderProgram);
-    // Upload the camera matrix
-    gl.uniformMatrix4fv(this._progCopy.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-    // view matrix
-    gl.uniformMatrix4fv(this._progCopy.u_viewMatrix, false, this._viewMatrix);
-    // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
-    scene.draw(this._progCopy);
+    // mat4.perspective(this._viewProjectionMatrixLight, 70.0, canvas.width / canvas.height, 1.0, 200.0);
+    // mat4.lookAt(this._viewProjectionMatrixLight,    
+    //             vec3.fromValues(0.0, 8.0, 0.0),
+    //             vec3.fromValues(0.0, 0.0, 0.0),
+    //             vec3.fromValues(0.0, 1.0, 0.0));
 
 
     //--------------------------------------------------  
@@ -319,11 +317,35 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Use this shader program
     gl.useProgram(this._progShadowMap.glShaderProgram);
     // Bind any uniform variables
-    gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this.dirLightTransMat);
 
-    // scene.draw(this._progShadowMap);
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    renderFullscreenQuad(this._progShadowMap);
+    scene.draw(this._progShadowMap);
+    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // renderFullscreenQuad(this._progShadowMap);
+
+
+
+
+    //--------------------------------------------------  
+    // Create texture to hold g-buffers
+    //--------------------------------------------------              
+    // Render to the whole screen
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    // Bind the framebuffer
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fbo);
+    // Clear the frame
+    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // Use the shader program to copy to the draw buffers
+    gl.useProgram(this._progCopy.glShaderProgram);
+    // Upload the camera matrix
+    gl.uniformMatrix4fv(this._progCopy.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    // view matrix
+    gl.uniformMatrix4fv(this._progCopy.u_viewMatrix, false, this._viewMatrix);
+    // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
+    // scene.draw(this._progCopy);
+
+
+    
 
 
 

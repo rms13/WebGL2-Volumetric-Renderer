@@ -158,10 +158,6 @@ export default function(params) {
     //vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
 
-    out_Color = vec4(normal, 1.0);
-    out_Color = vec4(1.0,0.0,0.0, 1.0);
-    return;
-
     //albedo = vec3(0.98,0.98,0.98);
 
     vec3 fragColor = vec3(0.0);

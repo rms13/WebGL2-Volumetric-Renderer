@@ -505,11 +505,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniformMatrix4fv(this._progShade.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
     gl.uniformMatrix4fv(this._progShade.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
     
-    // gl.uniform1f(this._progShade.u_volSize, this.SIZE);
-    // // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-    // gl.uniformMatrix4fv(this._progShade.u_volTransMat, false, this.volTransMat);
-    // gl.uniformMatrix4fv(this._progShade.u_invVolTransMat, false, this.invVolTransMat);
-    // gl.uniformMatrix4fv(this._progShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
+    gl.uniform1f(this._progShade.u_volSize, this.SIZE);
+    // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
+    gl.uniformMatrix4fv(this._progShade.u_volTransMat, false, this.volTransMat);
+    gl.uniformMatrix4fv(this._progShade.u_invVolTransMat, false, this.invVolTransMat);
+    gl.uniformMatrix4fv(this._progShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
 
     // if(this.framenum === undefined) this.framenum = 0.0;
     // this.framenum+=0.05;

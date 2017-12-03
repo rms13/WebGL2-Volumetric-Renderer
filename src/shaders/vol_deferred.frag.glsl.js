@@ -187,6 +187,22 @@ export default function(params) {
     return vec2(tNear, tFar);
   }
 
+  // void main() {
+  //   // Get position, color, and normal information from G-Buffer
+  //   vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
+  //   vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
+  //   vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
+  //   vec3 volCol     = texture(u_volPassBuffer, v_uv).xyz;
+  //   vec3 shadow     = shadowMap(v_position, normal, albedo);
+   
+  //   const vec3 ambientLight = vec3(0.025);
+  //   vec3 fragColor = vec3(0.0, 0.0, 0.0);
+    
+  //   fragColor += shadow;
+    
+  //   out_Color = vec4(fragColor, 1.0);
+  // }
+
   void main() {
     // Get position, color, and normal information from G-Buffer
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
@@ -194,141 +210,54 @@ export default function(params) {
     vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
     vec3 volCol     = texture(u_volPassBuffer, v_uv).xyz;
     vec3 shadow     = shadowMap(v_position, normal, albedo);
-   
+    
     const vec3 ambientLight = vec3(0.025);
     vec3 fragColor = vec3(0.0, 0.0, 0.0);
-    
     fragColor += shadow;
+    
+    //point light
+    vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
+    // vec3 lightPos = vec3(0.0, 8.0, 0.0);
+    vec3 lightCol = vec3(0.9, 0.8, 0.4);
+
+    float transmittance = 1.0;
+    vec3 scatteredLight = vec3(0.0);
+
+    vec3 L = (u_volTransMat * vec4((lightPos - v_position), 1.0)).xyz;
+    float distL = length(L);
+    vec3 lightDir = L / (distL);
+    vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
+    vec3 Li = max(0.0, dot(normalVol, lightDir)) * lightCol / (distL * distL);
+
+    fragColor += (albedo / PI) * Li;
+
+    // int div = 4;
+    // int step = div;
+    // vec2 intCoord = ivec2(floor(v_uv.x * 0.25 * u_screenW), floor(v_uv.y * 0.25 * u_screenH));
+    // vec2 actualCoord = ivec2(floor(v_uv.x * u_screenW), floor(v_uv.y * u_screenH));
+    // float minCoordX = intCoord.x % 4.0;
+    // float minCoordY = intCoord.y % 4.0;
+    // float maxCoordX = 4 - minCoordX;
+    // float maxCoordY = 4 - minCoordY;
+    // vec2 coord = texture(u_volPassBuffer, v_uv * 0.25);
+
+    // float right = left + step;
+    // float left = v_uv.x * u_screenW;
+    // float left = v_uv.x * u_screenW;
+    float divW = 1.0/(u_screenW*0.25);
+    float divH = 1.0/(u_screenH*0.25);
+    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv*0.25);
+    // vec4 volTexSample01 = texture(u_volPassBuffer, vec2(v_uv.x, v_uv.y + divH));
+    // vec4 volTexSample10 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y));
+    // vec4 volTexSample11 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y + divH));
+    // vec4 volTexSample = (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * 0.25;
+    fragColor *= volTexSample00.w;
+    fragColor += volTexSample00.xyz;
+
+    // gamma correct
+    fragColor = pow(fragColor, vec3(1.0/2.2));
     
     out_Color = vec4(fragColor, 1.0);
   }
-
-  // void main() {
-  //   const vec3 ambientLight = vec3(0.025);
-
-  //   // Get position, color, and normal information from G-Buffer
-  //   vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
-  //   vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
-  //   vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
-  //   vec3 volCol = texture(u_volPassBuffer, v_uv).xyz;
-  //   vec3 shadowMap = texture(u_shadowMap, v_uv).xyz;
-
-  //   //albedo = vec3(0.98,0.98,0.98);
-
-  //   vec3 fragColor = vec3(0.0);
-
-  //   // DIRECTIONAL LIGHT - SUN
-  //   // vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
-  //   // vec3 sunCol = vec3(0.5, 0.5, 0.4);
-  //   // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
-
-  //   //point light
-  //   // vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
-  //   vec3 lightPos = vec3(0.0, 8.0, 0.0);
-  //   vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
-
-  //   float transmittance = 1.0;
-  //   vec3 scatteredLight = vec3(0.0);
-
-  // #if !USEPASS
-  //   //-- Naive Volumetric Ray March
-  //   // Make a ray from the camera to the point in world space.
-  //   vec3 rayOrigin    = u_camPos;
-  //   vec3 rayDirection = (v_position - rayOrigin);
-  //   float len = length(rayDirection);
-
-  //   rayDirection = normalize(rayDirection);
-
-  //   // Take the ray to the volumetric cube space
-  //   vec3 rayOriginVol = (u_volTransMat * vec4(rayOrigin, 1.0)).xyz;
-  //   vec3 rayDirectionVol = (u_volTransMat * vec4(rayDirection, 0.0)).xyz;
-
-  //   vec2 tValues = intersectCube(rayOriginVol, rayDirectionVol);
-  //   float tNear = tValues.x;
-  //   float tFar = tValues.y;
-
-  //   // float rayLength = length(rayDirectionVol);
-  //   float rayLength = abs(tFar - tNear);
-  //   rayDirectionVol = normalize(rayDirectionVol);
-
-  //   float stepSize = len / float(NUM_STEPS);
-
-  //   float pmAlbedo = SCATTERING / EXTINCTION;
-
-  //   vec3 fog = vec3(0.0);
-    
-  //   float muS = 0.0; // scattering
-  //   float muE = 0.0; // extinction
-  //   float muA = 0.05; // attenuation
-  //   vec3 p = vec3(0.0, 0.0, 0.0);
-
-  //   for(float i = 1.0; i <= len; i += stepSize) {
-  //     // Get ray marched point
-  //     vec3 p = rayOriginVol + (i * rayDirectionVol);
-
-  //     // add fog value to muS..
-  //     muS = i>tNear && i<tFar ? 0.5 : 0.02;
-  //     muE = max(0.0000001, muA + muS);
-
-  //     // evaluate lighting..
-  //     vec3 L = (u_volTransMat * vec4(lightPos, 1.0)).xyz - p;
-  //     // float distL = length(L);
-  //     // vec3 lightDir = L / (distL);
-  //     vec3 Li = lightCol / dot(L, L);
-
-  //     // improved scattering
-  //     vec3 scat = muS * Li * phaseFunction();
-  //     float expE = exp(-muE * stepSize);
-  //     vec3 integration = (scat - scat * expE) / muE;
-  //     scatteredLight += transmittance * integration;
-  //     transmittance *= expE;
-
-  //     // normal scattering
-  //     // transmittance *= exp(-muE * stepSize);
-  //     // scatteredLight += muS * Li * phaseFunction() * transmittance;// * stepSize;
-  //   }
-
-  // #endif
-
-  //   vec3 L = (u_volTransMat * vec4((lightPos - v_position), 1.0)).xyz;
-  //   float distL = length(L);
-  //   vec3 lightDir = L / (distL);
-  //   vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
-  //   vec3 Li = max(0.0, dot(normalVol, lightDir)) * lightCol / (distL * distL);
-
-  //   fragColor = (albedo/3.14) * Li;
-
-  // #if !USEPASS
-  //   fragColor *= transmittance;
-  //   fragColor += scatteredLight;
-  // #else
-  //   // int div = 4;
-  //   // int step = div;
-  //   // vec2 intCoord = ivec2(floor(v_uv.x * 0.25 * u_screenW), floor(v_uv.y * 0.25 * u_screenH));
-  //   // vec2 actualCoord = ivec2(floor(v_uv.x * u_screenW), floor(v_uv.y * u_screenH));
-  //   // float minCoordX = intCoord.x % 4.0;
-  //   // float minCoordY = intCoord.y % 4.0;
-  //   // float maxCoordX = 4 - minCoordX;
-  //   // float maxCoordY = 4 - minCoordY;
-  //   // vec2 coord = texture(u_volPassBuffer, v_uv * 0.25);
-
-  //   // float right = left + step;
-  //   // float left = v_uv.x * u_screenW;
-  //   // float left = v_uv.x * u_screenW;
-  //   float divW = 1.0/(u_screenW*0.25);
-  //   float divH = 1.0/(u_screenH*0.25);
-  //   vec4 volTexSample00 = texture(u_volPassBuffer, v_uv*0.25);
-  //   // vec4 volTexSample01 = texture(u_volPassBuffer, vec2(v_uv.x, v_uv.y + divH));
-  //   // vec4 volTexSample10 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y));
-  //   // vec4 volTexSample11 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y + divH));
-  //   // vec4 volTexSample = (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * 0.25;
-  //   fragColor *= volTexSample00.w;
-  //   fragColor += volTexSample00.xyz;
-  // #endif
-
-  //   // gamma correct
-  //   fragColor = pow(fragColor, vec3(1.0/2.2));
-  //   out_Color = vec4(fragColor.xyz, 1.0);
-  // }
   `;
 }

@@ -154,6 +154,27 @@ export default function(params) {
     return vec2(tNear, tFar);
   }
 
+
+  vec4 getBilinearFilteredPixelColor(sampler2D tex, float u, float v) {
+    u = u * u_screenW * 0.5;
+    v = v * u_screenH * 0.5;
+    float x = floor(u);
+    float y = floor(v);
+    float u_ratio = u - x;
+    float v_ratio = v - y;
+    float u_opposite = 1.0 - u_ratio;
+    float v_opposite = 1.0 - v_ratio;
+    x /= u_screenW;
+    y /= u_screenH;
+    float xp1 = x + 1.0/u_screenW;
+    float yp1 = y + 1.0/u_screenH;
+    vec4 result = texture(tex, vec2(x, y)) * u_opposite  
+      + texture(tex, vec2(xp1, y)) * u_ratio * v_opposite
+      + texture(tex, vec2(x, yp1)) * u_opposite
+      + texture(tex, vec2(xp1, yp1)) * u_ratio * v_ratio;
+    return result;
+  }
+
   void main() {
     const vec3 ambientLight = vec3(0.025);
 
@@ -205,7 +226,7 @@ export default function(params) {
     float pmAlbedo = SCATTERING / EXTINCTION;
 
     vec3 fog = vec3(0.0);
-    
+
     float muS = 0.0; // scattering
     float muE = 0.0; // extinction
     float muA = 0.05; // attenuation
@@ -251,33 +272,68 @@ export default function(params) {
     fragColor *= transmittance;
     fragColor += scatteredLight;
   #else
-    // int div = 4;
-    // int step = div;
+    // float div = 4.0;
+    // float step = 1.0/div;
+    // vec2 actualStep = vec2(1.0 / u_screenW, 1.0 / u_screenH);
+    // vec2 smallTexStep = actualStep * div;
+    // vec2 actualCoord = v_uv;
+
+    // vec2 stc = v_uv / smallTexStep;
+    // vec2 smallTexCoord = floor(stc); // coords for small tex..
+    // vec2 diff = v_uv - smallTexCoord; // weight for interpolation..
+    // smallTexCoord *= smallTexStep;
+
+    // vec4 volTexSample00 = texture(u_volPassBuffer, smallTexCoord);
+    // vec4 volTexSample01 = texture(u_volPassBuffer, vec2(smallTexCoord.x, smallTexCoord.y + smallTexStep.y));
+    // vec4 volTexSample10 = texture(u_volPassBuffer, vec2(smallTexCoord.x + smallTexStep.x, smallTexCoord.y));
+    // vec4 volTexSample11 = texture(u_volPassBuffer, vec2(smallTexCoord.x + smallTexStep.x, smallTexCoord.y + smallTexStep.y));
+    // vec4 volTexSample0 = diff.y * volTexSample00 + (1.0 - diff.y) * volTexSample01;
+    // vec4 volTexSample1 = diff.y * volTexSample10 + (1.0 - diff.y) * volTexSample11;
+    // vec4 volTexSample = diff.x * volTexSample0 + (1.0 - diff.x) * volTexSample1;
+    /////////////////////////////////////////////////////////////////////////////////////
+
     // vec2 intCoord = ivec2(floor(v_uv.x * 0.25 * u_screenW), floor(v_uv.y * 0.25 * u_screenH));
-    // vec2 actualCoord = ivec2(floor(v_uv.x * u_screenW), floor(v_uv.y * u_screenH));
+    // vec2 actualCoord = v_uv / actualStep;//vec2(v_uv.x / u_screenW, v_uv.y / u_screenH);
     // float minCoordX = intCoord.x % 4.0;
     // float minCoordY = intCoord.y % 4.0;
     // float maxCoordX = 4 - minCoordX;
     // float maxCoordY = 4 - minCoordY;
     // vec2 coord = texture(u_volPassBuffer, v_uv * 0.25);
 
-    // float right = left + step;
-    // float left = v_uv.x * u_screenW;
-    // float left = v_uv.x * u_screenW;
-    float divW = 1.0/(u_screenW*0.25);
-    float divH = 1.0/(u_screenH*0.25);
-    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv*0.25);
-    // vec4 volTexSample01 = texture(u_volPassBuffer, vec2(v_uv.x, v_uv.y + divH));
-    // vec4 volTexSample10 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y));
-    // vec4 volTexSample11 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y + divH));
-    // vec4 volTexSample = (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * 0.25;
-    fragColor *= volTexSample00.w;
-    fragColor += volTexSample00.xyz;
+    // // float right = left + step;
+    // // float left = v_uv.x * u_screenW;
+    // // float left = v_uv.x * u_screenW;
+
+    // float res = 0.5;
+    // float divW = 1.0/(u_screenW*res);
+    // float divH = 1.0/(u_screenH*res);
+    // vec2 smallTexUv = v_uv * res;
+    // vec4 volTexSample00 = texture(u_volPassBuffer, smallTexUv);
+    // vec4 volTexSample01 = texture(u_volPassBuffer, vec2(smallTexUv.x, smallTexUv.y + divH));
+    // vec4 volTexSample10 = texture(u_volPassBuffer, vec2(smallTexUv.x + divW, smallTexUv.y));
+    // vec4 volTexSample11 = texture(u_volPassBuffer, vec2(smallTexUv.x + divW, smallTexUv.y + divH));
+
+    // ivec2 intUV = ivec2(int(v_uv.x * u_screenW), int(v_uv.y * u_screenH));
+    // vec4 volTexSample = intUV.x % 2 == 0 && intUV.y % 2 == 0 ?
+    //   volTexSample00 : (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * res;
+
+    // for(float x=0.0; x<4.0; x+=1.0) {
+    //   for(float y=0.0; y<4.0; y+=1.0) {
+    //     volTexSample += texture(u_volPassBuffer, vec2(v_uv.x + x * divW, v_uv.y + y * divH));
+    //   }
+    // }
+    // volTexSample *= res;
+    //volTexSample = texture(u_volPassBuffer, v_uv*0.25);
+
+    vec4 volTexSample = getBilinearFilteredPixelColor(u_volPassBuffer, v_uv.x, v_uv.y);
+
+    fragColor *= volTexSample.w;
+    fragColor += volTexSample.xyz;
   #endif
 
     // gamma correct
     fragColor = pow(fragColor, vec3(1.0/2.2));
-    out_Color = vec4(fragColor.xyz, 1.0);
+    out_Color = vec4(volTexSample.xyz, 1.0);
   }
   `;
 }

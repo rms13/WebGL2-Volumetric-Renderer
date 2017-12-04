@@ -309,7 +309,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
 
     // volume pass..
-    gl.viewport(0, 0, canvas.width/4, canvas.height/4);
+    gl.viewport(0, 0, canvas.width/2, canvas.height/2);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
     //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 

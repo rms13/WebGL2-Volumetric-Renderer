@@ -212,6 +212,28 @@ export default function(params) {
   //   return 0.0;
   // }
 
+  float volumetricShadow(in vec3 from, in vec3 to, in float tNear, in float tFar)
+  {
+    const float numStep = 16.0; // quality control. Bump to avoid shadow alisaing
+    float shadow = 1.0;
+    float muS = 0.0;
+    float muE = 0.0;
+    float muA = 0.05;
+    float dd = length(to-from) / numStep;
+    for(float s=0.5; s<(numStep-0.1); s+=1.0)// start at 0.5 to sample at center of integral part
+    {
+        vec3 pos = from + (to - from) * (s / (numStep));
+        // getParticipatingMedia(muS, muE, pos);
+        
+        muS = s > tNear && s < tFar ? 0.5 : 0.02;
+        muE = max(0.0000001, muA + muS);
+
+        shadow *= exp(-muE * dd);
+    }
+
+    return shadow;
+  }
+
   void main() 
   {
     const vec3 ambientLight = vec3(0.025);
@@ -231,10 +253,21 @@ export default function(params) {
     // vec3 sunCol = vec3(0.5, 0.5, 0.4);
     // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
+    vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
+
     //point light
     vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
     // vec3 lightPos = vec3(0.0, 3.0, 0.0);
-    vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
+    // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
+    // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
+    vec3 lightCol = 1000.0 * vec3(0.0, 0.0, 1.0);
+
+    vec3 lightPos2 = vec3(2.0 * 1.0 * sin(u_time * 0.5), 0.0, 0.0);
+    // vec3 lightPos = vec3(0.0, 3.0, 0.0);
+    // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
+    // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
+    vec3 lightCol2 = 1000.0 * vec3(1.0, 0.0, 0.0);
+    
 
     //-- Naive Volumetric Ray March
     // Make a ray from the camera to the point in world space.
@@ -262,9 +295,9 @@ export default function(params) {
 
     vec3 fog = vec3(0.0);
     
-    float muS = 0.0; // scattering
-    float muE = 0.0; // extinction
-    float muA = 0.05; // attenuation
+    float muS = 0.009; // scattering
+    float muA = 0.006; // attenuation
+    float muE = muS + muA; // extinction
     vec3 p = vec3(0.0, 0.0, 0.0);
 
     float transmittance = 1.0;
@@ -275,7 +308,7 @@ export default function(params) {
       vec3 p = rayOriginVol + (i * rayDirectionVol);
 
       // add fog value to muS..
-      muS = i>tNear && i<tFar ? 0.5 : 0.02;
+      muS = i>tNear && i<tFar ? 0.05 : 0.02;
       muE = max(0.0000001, muA + muS);
 
       // evaluate lighting..
@@ -284,9 +317,24 @@ export default function(params) {
       // vec3 lightDir = L / (distL);
       vec3 Li = lightCol / dot(L, L);
 
+      // evaluate lighting..
+      vec3 L2 = (u_volTransMat * vec4(lightPos2, 1.0)).xyz - p;
+      // float distL = length(L);
+      // vec3 lightDir = L / (distL);
+      vec3 Li2 = lightCol2 / dot(L2, L2);
+
       // improved scattering
       // vec3 scat = muS * Li * phaseFunction() * shadow;
+      // vec3 scat = muS * Li * phaseFunction()  shadow * volumetricShadow(p, lightPosition.xyz, tNear, tFar);
+// #define SHADOW
+#ifdef SHADOW
+      vec3 scat = muS * Li * phaseFunction() *  volumetricShadow(p, lightPos, tNear, tFar);
+      scat += muS * Li2 * phaseFunction() * volumetricShadow(p, lightPos2, tNear, tFar);
+#else
       vec3 scat = muS * Li * phaseFunction();
+      scat += muS * Li2 * phaseFunction();
+#endif
+
       float expE = exp(-muE * stepSize);
       vec3 integration = (scat - scat * expE) / muE;
       scatteredLight += transmittance * integration;
@@ -309,6 +357,8 @@ export default function(params) {
 
     //// gamma correct
     // fragColor = pow(fragColor, vec3(1.0/2.2));
+
+    // fragColor += shadow * volumetricShadow(lightPosition.xyz, v_position, tNear, tFar);
 
     out_Color = vec4(scatteredLight, 1.0);
   }

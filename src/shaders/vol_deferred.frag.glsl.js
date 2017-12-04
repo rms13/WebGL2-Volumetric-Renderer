@@ -50,7 +50,48 @@ export default function(params) {
 
   #define NUM_STEPS 100
 
-  vec3 shadowMap(vec3 pos, vec3 nor, vec3 col)
+  // To simplify: wavelength independent scattering and extinction
+  // void getParticipatingMedia(out float muS, out float muE, in vec3 pos)
+  // {
+  //     float heightFog = 7.0 + 3.0 * clamp(displacementSimple(pos.xz*0.005 + iTime*0.01),0.0,1.0);
+  //     heightFog = 0.3*clamp((heightFog-pos.y)*1.0, 0.0, 1.0);
+      
+  //     const float fogFactor = 1.0 + D_STRONG_FOG * 5.0;
+      
+  //     const float sphereRadius = 5.0;
+  //     float sphereFog = clamp((sphereRadius-length(pos-vec3(20.0,19.0,-17.0)))/sphereRadius, 0.0,1.0);
+      
+  //     const float constantFog = 0.02;
+  
+  //     muS = constantFog + heightFog*fogFactor + sphereFog;
+     
+  //     const float muA = 0.0;
+  //     muE = max(0.000000001, muA + muS); // to avoid division by zero extinction
+  // }
+  
+  float volumetricShadow(in vec3 from, in vec3 to)
+  {
+    const float numStep = 16.0; // quality control. Bump to avoid shadow alisaing
+    float shadow = 1.0;
+    float muS = 0.0;
+    float muE = 0.0;
+    float muA = 0.05;
+    float dd = length(to-from) / numStep;
+    for(float s=0.5; s<(numStep-0.1); s+=1.0)// start at 0.5 to sample at center of integral part
+    {
+        vec3 pos = from + (to - from) * (s / (numStep));
+        // getParticipatingMedia(muS, muE, pos);
+        
+        // muS = s > tNear && s < tFar ? 0.5 : 0.02;
+        // muE = max(0.0000001, muA + muS);
+
+        shadow *= exp(-muE * dd);
+    }
+
+    return shadow;
+  }
+
+  float shadowMap(vec3 pos, vec3 nor, vec3 col)
   {
     vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
     vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(pos, 1.0);
@@ -65,13 +106,14 @@ export default function(params) {
     vec3 sunCol       = vec3(0.5, 0.5, 0.4);
     vec4 rgbaDepth    = texture(u_shadowMap, shadowCoord.xy);
     float depth       = rgbaDepth.r; // Retrieve the z-value from R
-    float visibility  = (shadowCoord.z > depth+0.005)? 0.3 : 1.0;
+    float visibility  = (shadowCoord.z > depth + 0.005)? 0.1 : 1.0;
     // out_Color = vec4(shadowCoord, 1.0);
     float dotprod     = dot(lightDir.xyz, nor);
     vec3 albedo       = col * sunCol * max(dotprod, 0.05);
     // out_Color      = vec4(albedo * visibility, 1.0);    
 
-    return albedo * visibility;
+    // return albedo * visibility;
+    return visibility;
   }
 
   struct Light {
@@ -125,7 +167,7 @@ export default function(params) {
     vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
     vec3 volCol     = texture(u_volPassBuffer, v_uv).xyz;
-    vec3 shadow     = shadowMap(v_position, normal, albedo);
+    float shadow     = shadowMap(v_position, normal, albedo);
     
     vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
     // Remove some shadow acne
@@ -135,13 +177,12 @@ export default function(params) {
     const vec3 ambientLight = vec3(0.025);
     vec3 fragColor = vec3(0.0, 0.0, 0.0);
 
-#define USESHADOW 
-#ifndef USESHADOW
     vec4 sunDir     = normalize(vec4(0.0,0.0,0.0,1.0) - lightPosition);
     vec3 sunCol = vec3(0.5, 0.5, 0.4);
     fragColor += albedo * sunCol * max(dot(sunDir.xyz, normal), 0.05);
-#else
-    fragColor += shadow;      
+#define USESHADOW 
+#ifdef USESHADOW
+  fragColor *= shadow;//* volumetricShadow(v_position, lightPosition);      
 #endif
       
     // Point light
@@ -177,15 +218,19 @@ export default function(params) {
     // vec4 volTexSample10 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y));
     // vec4 volTexSample11 = texture(u_volPassBuffer, vec2(v_uv.x + divW, v_uv.y + divH));
     // vec4 volTexSample = (volTexSample00 + volTexSample00 + volTexSample00 + volTexSample00) * 0.25;
+    
+#define VOLUME
+#ifdef VOLUME
     fragColor *= volTexSample00.w;
     fragColor += volTexSample00.xyz;
+#endif
 
     // Gamma Correction
 // #define AMBIENT
 #ifndef AMBIENT
-    fragColor = pow(fragColor, vec3(1.0 / 2.2));
-#else
     fragColor = pow(fragColor * ambientLight, vec3(1.0/ 2.2));
+#else
+    fragColor = pow(fragColor, vec3(1.0 / 2.2));
 #endif
 
     out_Color = vec4(fragColor, 1.0);

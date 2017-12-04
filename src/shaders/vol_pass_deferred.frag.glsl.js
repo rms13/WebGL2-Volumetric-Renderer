@@ -8,7 +8,11 @@ export default function(params) {
   uniform sampler2D u_gbuffers[${params.numGBuffers}];
 
   uniform sampler3D u_volBuffer;
-  
+
+  uniform mat4 u_viewProjectionMatrix;
+  uniform mat4 u_lightViewProjectionMatrix;
+  uniform sampler2D u_shadowMap;
+
   in vec2 v_uv;
 
   uniform sampler2D u_clusterbuffer;
@@ -150,14 +154,74 @@ export default function(params) {
     return vec2(tNear, tFar);
   }
 
-  void main() {
+  vec3 shadowMap(vec3 pos, vec3 nor, vec3 col)
+  {
+    vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
+    vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(pos, 1.0);
+    // Remove some shadow acne
+    lightPosition.z -= 0.007;
+
+    // Get the light direction from the point to the light
+    vec4 lightDir     = normalize(vec4(0.0,0.0,0.0,1.0) - lightPosition);
+    // vec4 lightDir     = normalize(position - lightPosition);
+    vec3 shadowCoord  = (lightPosition.xyz / lightPosition.w) / 2.0 + 0.5;
+
+    vec3 sunCol       = vec3(0.5, 0.5, 0.4);
+    vec4 rgbaDepth    = texture(u_shadowMap, shadowCoord.xy);
+    float depth       = rgbaDepth.r; // Retrieve the z-value from R
+    float visibility  = (shadowCoord.z > depth+0.005)? 0.3 : 1.0;
+    // out_Color = vec4(shadowCoord, 1.0);
+    float dotprod     = dot(lightDir.xyz, nor);
+    vec3 albedo       = col * sunCol * max(dotprod, 0.05);
+    // out_Color      = vec4(albedo * visibility, 1.0);    
+
+    return albedo * visibility / 2.0;
+  }
+
+  // void getPM(out float muS, out float muE, vec3 pos)
+  // {
+  //   float heightFog = 7.0 + 3.0*clamp(displacementSimple(pos.xz*0.005 + iTime*0.01),0.0,1.0);
+  //   heightFog = 0.3*clamp((heightFog-pos.y)*1.0, 0.0, 1.0);
+    
+  //   const float fogFactor = 1.0 + D_STRONG_FOG * 5.0;
+    
+  //   const float sphereRadius = 5.0;
+  //   float sphereFog = clamp((sphereRadius-length(pos-vec3(20.0,19.0,-17.0)))/sphereRadius, 0.0,1.0);
+    
+  //   const float constantFog = 0.02;
+
+  //   muS = constantFog + heightFog*fogFactor + sphereFog;
+   
+  //   const float muA = 0.0;
+  //   muE = max(0.000000001, muA + muS); // to avoid division by zero extinction
+  // }
+
+  // float volumetricShadow(vec3 from, vec3 to)
+  // {
+  //   float shadow = 1.0;
+  //   float muS = 0.0;
+  //   float muE = 0.0;
+
+  //   float dd = length(to - from) / 16.0;
+
+  //   for(float s = 0.5; s < (16.0 - 0.1); s += 1.0) {
+  //     vec3 pos = from + (to - from) * (s / 16.0);
+
+  //   }
+
+  //   return 0.0;
+  // }
+
+  void main() 
+  {
     const vec3 ambientLight = vec3(0.025);
 
     // Get position, color, and normal information from G-Buffer
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
-    //vec3 albedo = texture(u_gbuffers[1], v_uv).xyz;
-    vec3 normal = texture(u_gbuffers[2], v_uv).xyz;
-
+    vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
+    vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
+    vec3 shadow     = shadowMap(v_position, normal, albedo);
+    
     //albedo = vec3(0.98,0.98,0.98);
 
     vec3 fragColor = vec3(0.0);
@@ -169,7 +233,8 @@ export default function(params) {
 
     //point light
     vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
-    vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
+    // vec3 lightPos = vec3(0.0, 3.0, 0.0);
+    vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
 
     //-- Naive Volumetric Ray March
     // Make a ray from the camera to the point in world space.
@@ -220,6 +285,7 @@ export default function(params) {
       vec3 Li = lightCol / dot(L, L);
 
       // improved scattering
+      // vec3 scat = muS * Li * phaseFunction() * shadow;
       vec3 scat = muS * Li * phaseFunction();
       float expE = exp(-muE * stepSize);
       vec3 integration = (scat - scat * expE) / muE;

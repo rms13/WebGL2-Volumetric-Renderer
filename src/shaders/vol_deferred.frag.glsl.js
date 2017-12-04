@@ -119,90 +119,6 @@ export default function(params) {
     }
   }
 
-  float transmittance(vec3 p1, vec3 p2)
-  {
-    
-    float exponent = -EXTINCTION * texture(u_volBuffer, p2.xxx/u_volSize/4.0).x/255.0/*DENSITY*/ * distance(p1, p2);
-
-    return exp(exponent);
-  }
-
-  float phaseFunction(vec3 wo, vec3 wi, float g)
-  {
-    float dot = dot(wo, wi);
-    float cosTheta = cos(dot);
-
-    float num = 1.0f - (g * g);
-    float denom = 4.0f * PI * pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5);
-
-    return num / denom;
-  }
-
-  float phaseFunction()
-  {
-      return 1.0 / (4.0 * PI);
-  }
-
-  vec2 intersectCube(vec3 p, vec3 dir)
-  {
-    float tNear = -1000.0;
-    float tFar  = 1000.0;
-
-    float min = -u_volSize / 2.0;
-    float max = u_volSize / 2.0;
-
-    for(int i = 0; i < 3; i++) {
-      // X-Slab
-      if(dir[i] == 0.0) {
-        if(p[i] < min || p[i] > max) {
-          // miss
-          return vec2(2000.0, 2000.0);
-        }
-      }
-
-      float t0 = (min - p[i]) / dir[i];
-      float t1 = (max - p[i]) / dir[i];
-
-      if(t0 > t1) {
-        // swap
-        float t = t0;
-        t0 = t1;
-        t1 = t;
-      }
-
-      if(t0 > tNear) {
-        tNear = t0;
-      }
-
-      if(t1 < tFar) {
-        tFar = t1;
-      }
-    }
-
-    if(tNear > tFar) {
-      // miss 
-      return vec2(2000.0, 2000.0);
-    }
-
-    return vec2(tNear, tFar);
-  }
-
-  // void main() {
-  //   // Get position, color, and normal information from G-Buffer
-  //   vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
-  //   vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
-  //   vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
-  //   vec3 volCol     = texture(u_volPassBuffer, v_uv).xyz;
-  //   vec3 shadow     = shadowMap(v_position, normal, albedo);
-   
-  //   const vec3 ambientLight = vec3(0.025);
-  //   vec3 fragColor = vec3(0.0, 0.0, 0.0);
-    
-  //   fragColor += shadow;
-    
-  //   out_Color = vec4(fragColor, 1.0);
-  // }
-
   void main() {
     // Get position, color, and normal information from G-Buffer
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
@@ -211,17 +127,27 @@ export default function(params) {
     vec3 volCol     = texture(u_volPassBuffer, v_uv).xyz;
     vec3 shadow     = shadowMap(v_position, normal, albedo);
     
+    vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
+    // Remove some shadow acne
+    lightPosition.z -= 0.007;
+    vec3 shadowCoord  = (lightPosition.xyz / lightPosition.w) / 2.0 + 0.5;
+
     const vec3 ambientLight = vec3(0.025);
     vec3 fragColor = vec3(0.0, 0.0, 0.0);
-    fragColor += shadow;
-    
-    //point light
+
+#define USESHADOW 
+#ifndef USESHADOW
+    vec4 sunDir     = normalize(vec4(0.0,0.0,0.0,1.0) - lightPosition);
+    vec3 sunCol = vec3(0.5, 0.5, 0.4);
+    fragColor += albedo * sunCol * max(dot(sunDir.xyz, normal), 0.05);
+#else
+    fragColor += shadow;      
+#endif
+      
+    // Point light
     vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
     // vec3 lightPos = vec3(0.0, 8.0, 0.0);
     vec3 lightCol = vec3(0.9, 0.8, 0.4);
-
-    float transmittance = 1.0;
-    vec3 scatteredLight = vec3(0.0);
 
     vec3 L = (u_volTransMat * vec4((lightPos - v_position), 1.0)).xyz;
     float distL = length(L);
@@ -254,9 +180,14 @@ export default function(params) {
     fragColor *= volTexSample00.w;
     fragColor += volTexSample00.xyz;
 
-    // gamma correct
-    fragColor = pow(fragColor, vec3(1.0/2.2));
-    
+    // Gamma Correction
+// #define AMBIENT
+#ifndef AMBIENT
+    fragColor = pow(fragColor, vec3(1.0 / 2.2));
+#else
+    fragColor = pow(fragColor * ambientLight, vec3(1.0/ 2.2));
+#endif
+
     out_Color = vec4(fragColor, 1.0);
   }
   `;

@@ -52,9 +52,30 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       numGBuffers: NUM_GBUFFERS,
       xSlices: xSlices, ySlices: ySlices, zSlices: zSlices,
     }), {
-      uniforms: ['u_gbuffers[0]', 'u_gbuffers[1]', 'u_gbuffers[2]', 'u_lightbuffer', 'u_clusterbuffer', 'u_viewMatrix', 'u_invViewMatrix', 'u_screenW', 'u_screenH', 'u_camN', 'u_camF', 'u_camPos',
-        'u_volBuffer', 'u_time', 'u_volSize', 'u_volTransMat', 'u_invVolTransMat', 'u_invTranspVolTransMat' /*'u_volPos', 'u_volOrient'*/],
-      attribs: ['a_position']
+      uniforms: [ 'u_gbuffers[0]', 
+                  'u_gbuffers[1]', 
+                  'u_gbuffers[2]', 
+                  'u_lightbuffer', 
+                  'u_clusterbuffer', 
+                  'u_viewMatrix', 
+                  'u_invViewMatrix', 
+                  'u_screenW', 
+                  'u_screenH', 
+                  'u_camN', 
+                  'u_camF', 
+                  'u_camPos',
+                  'u_volBuffer', 
+                  'u_time', 
+                  'u_volSize', 
+                  'u_volTransMat', 
+                  'u_invVolTransMat', 
+                  'u_invTranspVolTransMat',
+                  'u_viewProjectionMatrix',
+                  'u_lightViewProjectionMatrix',
+                  'u_shadowMap'
+                  /*'u_volPos', 'u_volOrient'*/
+                ],
+      attribs:  ['a_position']
     });
 
     this._progShade = loadShaderProgram(QuadVertSource, fsSource({
@@ -436,6 +457,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.useProgram(this._progVolPass.glShaderProgram);
 
     // TODO: Bind any other shader inputs
+    gl.uniformMatrix4fv(this._progVolPass.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    gl.uniformMatrix4fv(this._progVolPass.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
     gl.uniformMatrix4fv(this._progVolPass.u_viewMatrix, false, this._viewMatrix);
     gl.uniformMatrix4fv(this._progVolPass.u_invViewMatrix, false, this._invViewMatrix);    
     gl.uniform1f(this._progVolPass.u_screenW, canvas.width);
@@ -447,8 +470,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniform1f(this._progVolPass.u_volSize, this.SIZE);
     // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
     gl.uniformMatrix4fv(this._progVolPass.u_volTransMat, false, this.volTransMat);
-    gl.uniformMatrix4fv(this._progVolPass.u_invVolTransMat, false, this.invVolTransMat);
-    gl.uniformMatrix4fv(this._progVolPass.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
+    gl.uniformMatrix4fv(this._progVolPass.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    gl.uniformMatrix4fv(this._progVolPass.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
 
     if(this.framenum === undefined) this.framenum = 0.0;
     this.framenum+=0.05;
@@ -481,6 +504,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.activeTexture(gl.TEXTURE5);
     gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
     gl.uniform1i(this._progVolPass.u_volBuffer, 5);
+
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
+    gl.uniform1i(this._progVolPass[`u_shadowMap`], 6);
 
     renderFullscreenQuad(this._progVolPass);
     //scene.draw(this._progVolPass);

@@ -211,9 +211,9 @@ export default function(params) {
 
       // add fog value to muS..
       vec3 p1 = p;
-      p1.z += u_time * 0.5;
+      p1.x += u_time;
       float den = texture(u_volBuffer, p1/16.0).x;
-      muS = i>tNear && i<tFar ? den / 2.0 : 0.02;
+      muS = i>tNear && i<tFar ? den * 0.5 : 0.02;
       muE = max(0.0000001, muA + muS);
 
       // evaluate lighting..

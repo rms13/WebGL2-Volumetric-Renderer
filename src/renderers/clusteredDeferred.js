@@ -185,7 +185,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     for (var k = 0; k < this.SIZE; ++k) {
       for (var j = 0; j < this.SIZE; ++j) {
         for (var i = 0; i < this.SIZE; ++i) {
-          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = Math.random() * 250;// + 250;//Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
+          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = Math.random() * 255;// + 250;//Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
         }
       }
     }
@@ -309,7 +309,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
 
     // volume pass..
-    gl.viewport(0, 0, canvas.width/4, canvas.height/4);
+    gl.viewport(0, 0, canvas.width/2, canvas.height/2);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
     //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
 

@@ -323,10 +323,10 @@ export default function(params) {
     //   }
     // }
     // volTexSample *= res;
-    //volTexSample = texture(u_volPassBuffer, v_uv*0.25);
+    //volTexSample = texture(u_volPassBuffer, v_uv*0.5);
 
     //vec4 volTexSample = getBilinearFilteredPixelColor(u_volPassBuffer, v_uv.x, v_uv.y);
-    vec4 volTexSample = texture(u_volPassBuffer, v_uv*0.25);
+    vec4 volTexSample = texture(u_volPassBuffer, v_uv*0.5);
 
     fragColor *= volTexSample.w;
     fragColor += volTexSample.xyz;

@@ -308,7 +308,10 @@ export default function(params) {
       vec3 p = rayOriginVol + (i * rayDirectionVol);
 
       // add fog value to muS..
-      muS = i>tNear && i<tFar ? 0.05 : 0.02;
+      vec3 p1 = p;
+      p1.x += u_time;
+      float den = texture(u_volBuffer, p1/16.0).x;
+      muS = i>tNear && i<tFar ? den * 0.5 : 0.02;
       muE = max(0.0000001, muA + muS);
 
       // evaluate lighting..

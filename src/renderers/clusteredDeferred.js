@@ -16,6 +16,10 @@ import ClusteredRenderer from './clustered';
 
 export const NUM_GBUFFERS = 3;
 
+function isPowerOf2(value) {
+  return (value & (value - 1)) == 0;
+}
+
 export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   constructor(xSlices, ySlices, zSlices) {
     super(xSlices, ySlices, zSlices);
@@ -160,17 +164,71 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this._shadowDepthTex, 0);
 
     // Shadow Map
-    this._shadowMapTexture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
-    gl.bindTexture(gl.TEXTURE_2D, null);
 
-    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
-    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);
+    var userAgent = window.navigator.userAgent,
+      platform = window.navigator.platform,
+      macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
+      windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
+      iosPlatforms = ['iPhone', 'iPad', 'iPod'],
+      os = null;
+
+    if (macosPlatforms.indexOf(platform) !== -1) {
+      os = 'Mac OS';
+    } else if (iosPlatforms.indexOf(platform) !== -1) {
+      os = 'iOS';
+    } else if (windowsPlatforms.indexOf(platform) !== -1) {
+      os = 'Windows';
+    } else if (/Android/.test(userAgent)) {
+      os = 'Android';
+    } else if (!os && /Linux/.test(platform)) {
+      os = 'Linux';
+    }
+
+    if(os == 'Windows') {
+      const shadowmaptextureimage = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, shadowmaptextureimage);
+
+      const level = 0;
+      const internalformat = gl.RGBA;
+      const _width = 1;
+      const _height = 1;
+      const border = 0;
+      const srcFormat = gl.RGBA;
+      const srcType = gl.UNSIGNED_BYTE;
+
+      gl.texImage2D(gl.TEXTURE_2D, level, internalformat, _width, _height, border, srcFormat, srcType, null);
+
+      const image = new Image();
+      image.onload = function() {
+        gl.bindTexture(gl.TEXTURE_2D, shadowmaptextureimage);
+        gl.texImage2D(gl.TEXTURE_2D, level, internalformat, srcFormat, srcType, image);
+
+        if(isPowerOf2(image.width) && isPowerOf2(image.height)) {
+          gl.generateMipmap(gl.TEXTURE_2D);
+        }
+        else {
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LinearFilter);
+        }
+      };
+
+      image.src = "../../images/shadowmap.png";
+
+      this._shadowMapTexture = shadowmaptextureimage;
+    } else if(os == 'Mac OS') {
+      this._shadowMapTexture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
+      gl.bindTexture(gl.TEXTURE_2D, null);
+
+      gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
+      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);  
+    }
 
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
       throw "Framebuffer incomplete";

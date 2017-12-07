@@ -325,7 +325,8 @@ export default function(params) {
     // volTexSample *= res;
     //volTexSample = texture(u_volPassBuffer, v_uv*0.25);
 
-    vec4 volTexSample = getBilinearFilteredPixelColor(u_volPassBuffer, v_uv.x, v_uv.y);
+    //vec4 volTexSample = getBilinearFilteredPixelColor(u_volPassBuffer, v_uv.x, v_uv.y);
+    vec4 volTexSample = texture(u_volPassBuffer, v_uv*0.25);
 
     fragColor *= volTexSample.w;
     fragColor += volTexSample.xyz;
@@ -333,7 +334,9 @@ export default function(params) {
 
     // gamma correct
     fragColor = pow(fragColor, vec3(1.0/2.2));
-    out_Color = vec4(volTexSample.xyz, 1.0);
+    // out_Color = vec4(volTexSample.xyz, 1.0);
+    out_Color = vec4(fragColor.xyz, 1.0);
+    
   }
   `;
 }

@@ -35,7 +35,7 @@ export default function(params) {
   #define DENSITY 0.5
   #define PI 3.14159265
 
-  #define NUM_STEPS 100
+  #define NUM_STEPS 128
 
   struct Light {
     vec3 position;
@@ -210,7 +210,10 @@ export default function(params) {
       vec3 p = rayOriginVol + (i * rayDirectionVol);
 
       // add fog value to muS..
-      muS = i>tNear && i<tFar ? 0.5 : 0.02;
+      vec3 p1 = p;
+      p1.z += u_time * 0.5;
+      float den = texture(u_volBuffer, p1/16.0).x;
+      muS = i>tNear && i<tFar ? den / 2.0 : 0.02;
       muE = max(0.0000001, muA + muS);
 
       // evaluate lighting..
@@ -224,27 +227,20 @@ export default function(params) {
       float expE = exp(-muE * stepSize);
       vec3 integration = (scat - scat * expE) / muE;
       scatteredLight += transmittance * integration;
-      transmittance *= expE;
+      
+      
+      transmittance *= i>tNear && i<tFar ? expE /* den*/ : expE;
 
       // normal scattering
       // transmittance *= exp(-muE * stepSize);
       // scatteredLight += muS * Li * phaseFunction() * transmittance;// * stepSize;
     }
 
-    // vec3 L = (u_volTransMat * vec4((lightPos - v_position), 1.0)).xyz;
-    // float distL = length(L);
-    // vec3 lightDir = L / (distL);
-    // vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
-    // vec3 Li = max(0.0, dot(normalVol, lightDir)) * lightCol / (distL * distL);
-
-    // fragColor = (albedo/3.14) * Li;
-    // fragColor *= transmittance;
-    // fragColor += scatteredLight;
-
-    //// gamma correct
-    // fragColor = pow(fragColor, vec3(1.0/2.2));
+    //float den = texture(u_volBuffer, p).x / 255.0;
 
     out_Color = vec4(scatteredLight, transmittance);
+    
+    //out_Color = vec4(den, den, den, transmittance);
   }
   `;
 }

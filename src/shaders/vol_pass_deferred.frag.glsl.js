@@ -178,40 +178,6 @@ export default function(params) {
     return albedo * visibility / 2.0;
   }
 
-  // void getPM(out float muS, out float muE, vec3 pos)
-  // {
-  //   float heightFog = 7.0 + 3.0*clamp(displacementSimple(pos.xz*0.005 + iTime*0.01),0.0,1.0);
-  //   heightFog = 0.3*clamp((heightFog-pos.y)*1.0, 0.0, 1.0);
-    
-  //   const float fogFactor = 1.0 + D_STRONG_FOG * 5.0;
-    
-  //   const float sphereRadius = 5.0;
-  //   float sphereFog = clamp((sphereRadius-length(pos-vec3(20.0,19.0,-17.0)))/sphereRadius, 0.0,1.0);
-    
-  //   const float constantFog = 0.02;
-
-  //   muS = constantFog + heightFog*fogFactor + sphereFog;
-   
-  //   const float muA = 0.0;
-  //   muE = max(0.000000001, muA + muS); // to avoid division by zero extinction
-  // }
-
-  // float volumetricShadow(vec3 from, vec3 to)
-  // {
-  //   float shadow = 1.0;
-  //   float muS = 0.0;
-  //   float muE = 0.0;
-
-  //   float dd = length(to - from) / 16.0;
-
-  //   for(float s = 0.5; s < (16.0 - 0.1); s += 1.0) {
-  //     vec3 pos = from + (to - from) * (s / 16.0);
-
-  //   }
-
-  //   return 0.0;
-  // }
-
   float volumetricShadow(in vec3 from, in vec3 to, in float tNear, in float tFar)
   {
     const float numStep = 16.0; // quality control. Bump to avoid shadow alisaing

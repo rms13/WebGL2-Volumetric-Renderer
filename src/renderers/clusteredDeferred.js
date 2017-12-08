@@ -26,7 +26,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightTexture = new TextureBuffer(NUM_LIGHTS, 8);
 
     // Create a 3D texture to store volume
-    this.createVolumeBuffer();
+    // this.createVolumeBuffer(vec3.fromValues(0,-4,0));
+    this.createVolumeBuffer(vec3.fromValues(0,15,0));
 
     this._progShadowMap = loadShaderProgram(shadowVert, shadowFrag({}), {
       uniforms: [ 'u_viewProjectionMatrix', 
@@ -263,7 +264,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
-  createVolumeBuffer() {
+  createVolumeBuffer(pos) {
     // CREATE AND BING THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
     this.SIZE = 32;
@@ -277,7 +278,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       }
     }
 
-    var volPos = vec3.fromValues(0, -4, 0); // position of the volume
+    // var volPos = vec3.fromValues(0, -4, 0); // position of the volume
+    var volPos = pos; // position of the volume
     var volScale = vec3.fromValues(1, 1, 1); // scale of the volume
     var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
     quat.fromEuler(volOrient, 0.0, 0.0, 0.0);

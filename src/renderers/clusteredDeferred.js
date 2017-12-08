@@ -16,35 +16,6 @@ import ClusteredRenderer from './clustered';
 
 export const NUM_GBUFFERS = 3;
 
-function isPowerOf2(value) {
-  return (value & (value - 1)) == 0;
-}
-
-// Detect OS
-// https://stackoverflow.com/questions/38241480/detect-macos-ios-windows-android-and-linux-os-with-js
-var userAgent = window.navigator.userAgent,
-  platform = window.navigator.platform,
-  macosPlatforms = ['Macintosh', 'MacIntel', 'MacPPC', 'Mac68K'],
-  windowsPlatforms = ['Win32', 'Win64', 'Windows', 'WinCE'],
-  iosPlatforms = ['iPhone', 'iPad', 'iPod'],
-  os = null;
-
-if (macosPlatforms.indexOf(platform) !== -1) {
-  os = 'Mac OS';
-} else if (iosPlatforms.indexOf(platform) !== -1) {
-  os = 'iOS';
-} else if (windowsPlatforms.indexOf(platform) !== -1) {
-  os = 'Windows';
-} else if (/Android/.test(userAgent)) {
-  os = 'Android';
-} else if (!os && /Linux/.test(platform)) {
-  os = 'Linux';
-}
-
-// Detect Chrome
-// https://stackoverflow.com/questions/9847580/how-to-detect-safari-chrome-ie-firefox-and-opera-browser
-var isChrome = !!window.chrome && !!window.chrome.webstore;
-
 export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   constructor(xSlices, ySlices, zSlices) {
     super(xSlices, ySlices, zSlices);
@@ -57,22 +28,21 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Create a 3D texture to store volume
     this.createVolumeBuffer();
 
-    this._progShadowMap = loadShaderProgram(shadowVert, shadowFrag({
-      numLights: NUM_LIGHTS,
-      maxLights: MAX_LIGHTS_PER_CLUSTER,
-      numGBuffers: NUM_GBUFFERS,
-      xSlices: xSlices, ySlices: ySlices, zSlices: zSlices,
-    }), {
-      uniforms: [ //'u_viewMatrix', 
-                  //'u_invViewMatrix',
-                  'u_viewProjectionMatrix'
+    this._progShadowMap = loadShaderProgram(shadowVert, shadowFrag({}), {
+      uniforms: [ 'u_viewProjectionMatrix', 
+                  'u_colmap', 
+                  'u_normap', 
+                  'u_viewMatrix'
                 ],
-      attribs: ['a_position']
+      attribs:  [ 'a_position', 
+                  'a_normal', 
+                  'a_uv'
+                ]
     });
 
     this._progCopy = loadShaderProgram(toTextureVert, toTextureFrag, {
       uniforms: ['u_viewProjectionMatrix', 'u_colmap', 'u_normap', 'u_viewMatrix'],
-      attribs: ['a_position', 'a_normal', 'a_uv']
+      attribs:  ['a_position', 'a_normal', 'a_uv']
     });
 
     this._progVolPass = loadShaderProgram(VolPassVertSource, VolPassFragSource({
@@ -146,26 +116,12 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._invViewProjectionMatrix   = mat4.create();
 
     // View Projection for the Light
-    var dirLightPos     = vec3.fromValues(0, 8, 0); 
-    var dirLightScale   = vec3.fromValues(1, 1, 1); 
-    var dirLightOrient  = quat.create(); 
-    quat.fromEuler(dirLightOrient, 0.0, 0.0, 0.0);
-
-    this.dirLightTransMat = mat4.create();
-    mat4.fromRotationTranslationScale(this.dirLightTransMat, dirLightOrient, dirLightPos, dirLightScale);
-    this.invdirLightTransMat = mat4.create();
-    mat4.invert(this.invdirLightTransMat, this.dirLightTransMat);    
-    this.invTranspDirLightTransMat = mat4.create();
-    mat4.transpose(this.invTranspDirLightTransMat, this.invdirLightTransMat);
-
-    this._lightViewProjectionMatrix = mat4.create();
-    this._lightProjectionMatrix = mat4.create();
-    this._lightViewMatrix = mat4.create();
+    this._lightViewProjectionMatrix   = mat4.create();
+    this._lightProjectionMatrix       = mat4.create();
+    this._lightViewMatrix             = mat4.create();
     mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 200);
     mat4.lookAt(this._lightViewMatrix, vec3.fromValues(.5,4,.5), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
     mat4.multiply(this._lightViewProjectionMatrix, this._lightProjectionMatrix, this._lightViewMatrix);
-    // mat4.perspective(this._lightViewProjectionMatrix, 70.0, 1, 1.0, 200.0);
-    // mat4.lookAt(this._lightViewProjectionMatrix, dirLightPos, vec3.fromValues(0.0,0.0,0.0), vec3.fromValues(0.0,1.0,0.0));
   }
 
   setupDrawBuffers(width, height) {
@@ -189,55 +145,17 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.TEXTURE_2D, this._shadowDepthTex, 0);
 
     // Shadow Map
+    this._shadowMapTexture = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
 
-    
-
-    if(os == 'Mac OS' && isChrome) {
-      this._shadowMapTexture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, w, h, 0, gl.RGBA, gl.FLOAT, null);
-      gl.bindTexture(gl.TEXTURE_2D, null);
-
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
-      gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);  
-    } 
-    else {
-      const shadowmaptextureimage = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, shadowmaptextureimage);
-
-      const level = 0;
-      const internalformat = gl.RGBA;
-      const _width = 1;
-      const _height = 1;
-      const border = 0;
-      const srcFormat = gl.RGBA;
-      const srcType = gl.UNSIGNED_BYTE;
-
-      gl.texImage2D(gl.TEXTURE_2D, level, internalformat, _width, _height, border, srcFormat, srcType, null);
-
-      const image = new Image();
-      image.onload = function() {
-        gl.bindTexture(gl.TEXTURE_2D, shadowmaptextureimage);
-        gl.texImage2D(gl.TEXTURE_2D, level, internalformat, srcFormat, srcType, image);
-
-        if(isPowerOf2(image.width) && isPowerOf2(image.height)) {
-          gl.generateMipmap(gl.TEXTURE_2D);
-        }
-        else {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LinearFilter);
-        }
-      };
-
-      image.src = "../../images/shadowmap.png";
-
-      this._shadowMapTexture = shadowmaptextureimage;
-    }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboShadowMapPass);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._shadowMapTexture, 0);  
     
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
       throw "Framebuffer incomplete";
@@ -409,8 +327,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     }
     
     // Shadow Map
+    gl.bindTexture(gl.TEXTURE_2D, this._shadowDepthTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16, 1024, 1024, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
     gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 1024, 1024, 0, gl.RGBA, gl.FLOAT, null);
 
     // volume pass..
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
@@ -419,8 +339,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this.h = (height % 8);
     this.h += height;
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
-
-    gl.bindTexture(gl.TEXTURE_2D, null);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
@@ -438,18 +356,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     mat4.invert(this._invViewMatrix, this._viewMatrix);
     mat4.invert(this._invViewProjectionMatrix, this._viewProjectionMatrix);
 
-    // Update the light matrices
-    // This will have to be changed to be dynamic
-    
-    // mat4.perspective(this._viewProjectionMatrixLight, 70.0, canvas.width / canvas.height, 1.0, 200.0);
-    // mat4.lookAt(this._viewProjectionMatrixLight,    
-    //             vec3.fromValues(0.0, 8.0, 0.0),
-    //             vec3.fromValues(0.0, 0.0, 0.0),
-    //             vec3.fromValues(0.0, 1.0, 0.0));
-
-                
     //--------------------------------------------------  
-    // Create shadow map
+    // Shadow
     //--------------------------------------------------  
     // Render to the whole screen
     gl.viewport(0, 0, 1024, 1024);
@@ -462,7 +370,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.useProgram(this._progShadowMap.glShaderProgram);
     // Bind any uniform variables
     gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this._lightViewProjectionMatrix);
-
     scene.draw(this._progShadowMap);
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // renderFullscreenQuad(this._progShadowMap);
@@ -491,11 +398,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     
 
-
-
-
-
-
     for (let i = 0; i < NUM_LIGHTS; ++i) {
       this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 0] = scene.lights[i].position[0];
       this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 1] = scene.lights[i].position[1];
@@ -512,14 +414,13 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Update the clusters for the frame
     this.updateClustersOptimized(camera, this._viewMatrix, scene);
 
-    // volume pass..
+    //--------------------------------------------------  
+    // Volume Pass
+    //--------------------------------------------------              
     gl.viewport(0, 0, canvas.width/4, canvas.height/4);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
-    //gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-
     // Clear the frame
     gl.clear(gl.COLOR_BUFFER_BIT);
-
     // Use this shader program
     gl.useProgram(this._progVolPass.glShaderProgram);
 
@@ -579,6 +480,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     renderFullscreenQuad(this._progVolPass);
     //scene.draw(this._progVolPass);
 
+    //--------------------------------------------------  
+    // Final Shading Pass
+    //--------------------------------------------------      
     gl.viewport(0, 0, canvas.width, canvas.height);
     // Bind the default null framebuffer which is the screen
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);

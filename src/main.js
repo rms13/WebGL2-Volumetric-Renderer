@@ -4,6 +4,17 @@ import ClusteredForwardPlusRenderer from './renderers/clusteredForwardPlus';
 import ClusteredDeferredRenderer from './renderers/clusteredDeferred';
 import Scene from './scene';
 
+var fs = require('fs');
+var OBJ = require('webgl-obj-loader');
+
+var meshPath = '../models/bunny.obj';
+var opt = { encoding: 'utf8' };
+
+fs.readFile(meshPath, function(err, data) {
+  if(err) return console.error(err);
+  var mesh = new OBJ.Mesh(data);
+});
+
 const FORWARD = 'Forward';
 const CLUSTERED_FORWARD_PLUS = 'Clustered Forward+';
 const CLUSTERED_DEFFERED = 'Clustered Deferred';

@@ -15,6 +15,9 @@ export default function(params) {
 
   in vec2 v_uv;
 
+  uniform vec3 u_lightCol;
+  uniform float u_lightIntensity;
+
   uniform sampler2D u_clusterbuffer;
   uniform mat4 u_viewMatrix;
   uniform mat4 u_invViewMatrix;
@@ -232,7 +235,7 @@ export default function(params) {
     // vec3 lightPos = vec3(0.0, 3.0, 0.0);
     // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
     // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
-    vec3 lightCol2 = 1000.0 * vec3(1.0, 0.0, 0.0);
+    vec3 lightCol2 = u_lightIntensity * u_lightCol;
     
 
     //-- Naive Volumetric Ray March

@@ -11,6 +11,8 @@ const CLUSTERED_DEFFERED = 'Clustered Deferred';
 const params = {
   renderer: CLUSTERED_DEFFERED,
   _renderer: null,
+  PointLight1: [ 0, 128, 255 ],
+  PointLight1Intensity: 1
 };
 
 setRenderer(params.renderer);
@@ -21,7 +23,7 @@ function setRenderer(renderer) {
       params._renderer = new ForwardRenderer();
       break;
     case CLUSTERED_FORWARD_PLUS:
-      params._renderer = new ClusteredForwardPlusRenderer(15, 15, 15);
+      params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
       break;
     case CLUSTERED_DEFFERED:
       params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
@@ -30,6 +32,8 @@ function setRenderer(renderer) {
 }
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
+gui.addColor(params, 'PointLight1').onChange(setRenderer);
+gui.add(params, 'PointLight1Intensity', 1, 100).onChange(setRenderer);
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
@@ -41,7 +45,7 @@ gl.enable(gl.DEPTH_TEST);
 
 function render() {
   scene.update();
-  params._renderer.render(camera, scene);
+  params._renderer.render(camera, scene, params.PointLight1, params.PointLight1Intensity);
 }
 
 makeRenderLoop(render)();

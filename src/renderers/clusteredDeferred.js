@@ -19,7 +19,7 @@ export const NUM_GBUFFERS = 3;
 export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   constructor(xSlices, ySlices, zSlices) {
     super(xSlices, ySlices, zSlices);
-    
+
     this.setupDrawBuffers(canvas.width, canvas.height);
     
     // Create a texture to store light data
@@ -72,7 +72,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_invTranspVolTransMat',
                   'u_viewProjectionMatrix',
                   'u_lightViewProjectionMatrix',
-                  'u_shadowMap'
+                  'u_shadowMap',
+                  'u_lightCol',
+                  'u_lightIntensity'
                   /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
@@ -278,9 +280,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       }
     }
 
-    // var volPos = vec3.fromValues(0, -4, 0); // position of the volume
-    var volPos = pos; // position of the volume
-    var volScale = vec3.fromValues(1, 1, 1); // scale of the volume
+    var volPos = vec3.fromValues(0, -4, 0); // position of the volume
+    // var volPos = pos; // position of the volume
+    var volScale = vec3.fromValues(1,1,1); // scale of the volume
     var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
     quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
 
@@ -345,7 +347,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
-  render(camera, scene) {
+  render(camera, scene, lightCol, lightIntensity) {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);
     }
@@ -436,6 +438,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniform1f(this._progVolPass.u_camN, camera.near);
     gl.uniform1f(this._progVolPass.u_camF, camera.far);
     gl.uniform3f(this._progVolPass.u_camPos, camera.position.x, camera.position.y, camera.position.z);
+    gl.uniform3f(this._progVolPass.u_lightCol, lightCol[0], lightCol[1], lightCol[2]);
+    gl.uniform1f(this._progVolPass.u_lightIntensity, lightIntensity);
     
     gl.uniform1f(this._progVolPass.u_volSize, this.SIZE);
     // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);

@@ -37,9 +37,11 @@ const params = {
   Absorption: 0.05,
   UpscaleFactor: 4,
   Interpolation: 0,
-
+  DirLightPosX: 0.5,
+  DirLightPosZ: 0.5,
+  
   DebugVolume: false,
-  DebugShadow: false
+  DebugShadow: false,
 };
 
 setRenderer(params.renderer);
@@ -60,13 +62,12 @@ function setRenderer(renderer) {
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
 
-var debugFolder = gui.addFolder('Debug');
-debugFolder.add(params, 'DebugShadow').name('Shadow Pass').onChange(setRenderer);
-debugFolder.add(params, 'DebugVolume').name('Volume Pass').onChange(setRenderer);
-
+var dirLightPositions = gui.addFolder('Directional Light Position');
 gui.add(params, 'Heterogenous');
 gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
+dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
+dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
 
 var sandboxFolder = gui.addFolder('Sandbox Mode');
 sandboxFolder.add(params, 'SandboxMode').onChange(setRenderer);
@@ -102,6 +103,10 @@ volumeCoeffsFolder.add(params, 'Scattering', 0.25, 4).onChange(setRenderer);
 volumeCoeffsFolder.add(params, 'Absorption', 0.25, 4).onChange(setRenderer);
 volumeFolder.close();
 
+var debugFolder = gui.addFolder('Debug');
+debugFolder.add(params, 'DebugShadow').name('Shadow Pass').onChange(setRenderer);
+debugFolder.add(params, 'DebugVolume').name('Volume Pass').onChange(setRenderer);
+
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
 // scene.loadGLTF('models/box/box.gltf');
@@ -122,7 +127,9 @@ function render() {
     params.Light2Color, params.Light2Intensity, params.Light2PosX, params.Light2PosZ,
     params.VolumePosX, params.VolumePosY, params.VolumePosZ,
     params.VolumeScaleX, params.VolumeScaleY, params.VolumeScaleZ,
-    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Interpolation);
+    // General
+    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Interpolation,
+    params.DirLightPosX, params.DirLightPosZ);
 }
 
 makeRenderLoop(render)();

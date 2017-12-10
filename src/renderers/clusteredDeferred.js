@@ -447,7 +447,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         light2Col, light2Intensity, light2PosX, light2PosZ,
         volPosX, volPosY, volPosZ,
         volScaleX, volScaleY, volScaleZ,
-        upscaleFactor, heterogenous, scattering, absorption, interpolation) 
+        upscaleFactor, heterogenous, scattering, absorption, interpolation,
+        dirLightX, dirLightZ) 
   {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);
@@ -464,6 +465,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     //--------------------------------------------------  
     // Shadow
     //--------------------------------------------------  
+
+    mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 200);
+    mat4.lookAt(this._lightViewMatrix, vec3.fromValues(dirLightX, 4.0, dirLightZ), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
+    mat4.multiply(this._lightViewProjectionMatrix, this._lightProjectionMatrix, this._lightViewMatrix);
+
     // Render to the whole screen
     gl.viewport(0, 0, 1024, 1024);
     // Bind the framebuffer

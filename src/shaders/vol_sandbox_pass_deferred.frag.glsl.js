@@ -145,7 +145,7 @@ export default function(params) {
     return vec2(tNear, tFar);
   }
 
-  vec3 shadowMap(vec3 pos, vec3 nor, vec3 col)
+  float shadowMap(vec3 pos, vec3 nor, vec3 col)
   {
     vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
     vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(pos, 1.0);
@@ -166,7 +166,7 @@ export default function(params) {
     vec3 albedo       = col * sunCol * max(dotprod, 0.05);
     // out_Color      = vec4(albedo * visibility, 1.0);    
 
-    return albedo * visibility / 2.0;
+    return visibility;
   }
 
   float volumetricShadow(in vec3 from, in vec3 to, in float tNear, in float tFar)
@@ -209,6 +209,8 @@ export default function(params) {
     // vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
     // vec3 sunCol = vec3(0.5, 0.5, 0.4);
     // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
+    vec3 sunDir = normalize(vec3(0.5, 4, 0.5));
+    vec3 sunCol = vec3(1.0, 1.0, 0.8);
 
     //vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
 
@@ -334,6 +336,15 @@ export default function(params) {
       vec3 L = (u_volTransMat * vec4(lightPos2, 1.0)).xyz - p;
       vec3 Li = u_light1Intensity * u_light1Col / dot(L, L);
       scat += muS * Li * phaseFunction();
+
+      Li = sunCol;
+      #define USESHADOW 
+      #ifdef USESHADOW
+        float shadow = shadowMap(p.xyz - u_volTransMat[3].xyz, normal, albedo);
+        scat += max(5.0 * shadow, 0.2) * muS * Li * phaseFunction();
+      #else
+        scat += muS * Li * phaseFunction();     
+      #endif
 
       float expE = exp(-muE * stepSize);
       vec3 integration = (scat - scat * expE) / muE;

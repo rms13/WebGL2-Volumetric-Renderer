@@ -138,7 +138,7 @@ export default function(params) {
     return vec2(tNear, tFar);
   }
 
-  vec3 shadowMap(vec3 pos, vec3 nor, vec3 col)
+  float shadowMap(vec3 pos, vec3 nor, vec3 col)
   {
     vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
     vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(pos, 1.0);
@@ -159,7 +159,7 @@ export default function(params) {
     vec3 albedo       = col * sunCol * max(dotprod, 0.05);
     // out_Color      = vec4(albedo * visibility, 1.0);    
 
-    return albedo * visibility / 2.0;
+    return visibility;
   }
 
   float volumetricShadow(in vec3 from, in vec3 to, in float tNear, in float tFar)
@@ -192,16 +192,15 @@ export default function(params) {
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
     vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
-    //vec3 shadow     = shadowMap(v_position, normal, albedo);
+    
     
     //albedo = vec3(0.98,0.98,0.98);
 
     vec3 fragColor = vec3(0.0);
 
     // DIRECTIONAL LIGHT - SUN
-    vec3 sunDir = normalize(vec3(0.5, 4.0, 0.5));
-    // vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
-    // vec3 sunCol = 1000.0 * vec3(0.5, 0.5, 0.4);
+    vec3 sunDir = normalize(vec3(0.5, 4, 0.5));
+    vec3 sunCol = vec3(1.0, 1.0, 0.8);
     // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
     //vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
@@ -229,7 +228,7 @@ export default function(params) {
 
     // Take the ray to the volumetric cube space
     vec3 rayOriginVol = (u_volTransMat * vec4(rayOrigin, 1.0)).xyz;
-    vec3 rayDirectionVol = (u_volTransMat * vec4(rayDirection, 0.0)).xyz;
+    vec3 rayDirectionVol = (u_volTransMat * vec4(v_position, 1.0)).xyz - rayOriginVol;
 
     vec2 tValues = intersectCube(rayOriginVol, rayDirectionVol);
     float tNear = tValues.x;
@@ -244,22 +243,24 @@ export default function(params) {
     float muS = 0.009; // scattering
     float muA = 0.006; // attenuation
     float muE = muS + muA; // extinction
-    vec3 p = vec3(0.0, 0.0, 0.0);
 
     float transmittance = 1.0;
     vec3 scatteredLight = vec3(0.0);
 
+    vec4 pWorld;
+    vec3 p;
     for(float i = 1.0; i <= len; i += stepSize) {
       // Get ray marched point
-      vec3 p = rayOriginVol + (i * rayDirectionVol);
-      // vec3 pWorld = (u_invVolTransMat * vec4(p, 1.0)).xyz;//rayOrigin + i * rayDirection;
+      p = rayOriginVol + (i * rayDirectionVol);
+      pWorld = (u_invVolTransMat * vec4(p.xyz, 1.0));//rayOrigin + i * rayDirection;
+      pWorld /= pWorld.w;
       // vec2 pUv = pWorld.xy * 0.5 + 0.5;
 
       // add fog value to muS..
-      vec3 p1 = p;
+      vec3 p1 = p.xyz;
       p1.x += u_time;
       float den = texture(u_volBuffer, p1/16.0).x;
-      muS = i>tNear && i<tFar ? den * 0.5 : 0.02;
+      muS = i>tNear && i<tFar ? den * 0.5: 0.02;
       muE = max(0.0000001, muA + muS);
 
       // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..
@@ -303,10 +304,19 @@ export default function(params) {
         // Light light = UnpackLight(lightIdx);
         Light light = UnpackLight(j);
         vec3 L = (u_volTransMat * vec4(light.position, 1.0)).xyz - p;
-        vec3 Li = light.color / dot(L, L);
+        vec3 Li = 10.0 * light.color / dot(L, L);
         scat += muS * Li * phaseFunction();
       }
       // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
+
+      vec3 Li = sunCol;
+      #define USESHADOW 
+      #ifdef USESHADOW
+        float shadow = shadowMap(p.xyz - u_volTransMat[3].xyz, normal, albedo);
+        scat += max(5.0 * shadow, 0.2) * muS * Li * phaseFunction();
+      #else
+        scat += muS * Li * phaseFunction();     
+      #endif
 
       float expE = exp(-muE * stepSize);
       vec3 integration = (scat - scat * expE) / muE;
@@ -314,7 +324,7 @@ export default function(params) {
       transmittance *= expE;
     }
 
-    out_Color = vec4(scatteredLight, transmittance);
+    out_Color = vec4(scatteredLight.xyz, transmittance);
   }
   `;
 }

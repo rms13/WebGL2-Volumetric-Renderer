@@ -196,8 +196,8 @@ export default function(params) {
     vec3 fragColor = vec3(0.0);
 
     // DIRECTIONAL LIGHT - SUN
-    // vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
-    // vec3 sunCol = vec3(0.5, 0.5, 0.4);
+    vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
+    vec3 sunCol = vec3(0.5, 0.5, 0.4);
     // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
     //vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
@@ -248,61 +248,70 @@ export default function(params) {
     for(float i = 1.0; i <= len; i += stepSize) {
       // Get ray marched point
       vec3 p = rayOriginVol + (i * rayDirectionVol);
-      vec3 pWorld = (u_invVolTransMat * vec4(p, 1.0)).xyz;//rayOrigin + i * rayDirection;
-      vec2 pUv = pWorld.xy * 0.5 + 0.5;
+      // vec4 pWorld = (u_viewProjectionMatrix * u_invVolTransMat * vec4(p, 1.0));//rayOrigin + i * rayDirection;
+      // pWorld /= pWorld.w;
+      // vec2 pUv = pWorld.xy * 0.5 + 0.5;
 
       // add fog value to muS..
       vec3 p1 = p;
       p1.x += u_time;
       float den = texture(u_volBuffer, p1/16.0).x;
-      muS = i>tNear && i<tFar ? den * 0.5 : 0.02;
+      muS = i>tNear && i<tFar ? den * 0.5 : 0.02; // CHANGE THE MULTIPLIER FOR TONING DENSITY..
       muE = max(0.0000001, muA + muS);
 
       // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..
 
-      ivec3 clusterPos = ivec3(
-        int(pUv.x / u_screenW * float(${params.xSlices})),
-        int(pUv.y / u_screenH * float(${params.ySlices})),
-        int((-(u_viewMatrix * vec4(pWorld,1.0)).z - u_camN) / (u_camF - u_camN) * float(${params.zSlices}))
-      );
+      // ivec3 clusterPos = ivec3(
+      //   int(pUv.x / u_screenW * float(${params.xSlices})),
+      //   int(pUv.y / u_screenH * float(${params.ySlices})),
+      //   int((-(u_viewMatrix * vec4(pWorld.xyz,1.0)).z - u_camN) / (u_camF - u_camN) * float(${params.zSlices}))
+      // );
 
-      int clusterIdx = clusterPos.x + clusterPos.y * ${params.xSlices} + clusterPos.z * ${params.xSlices} * ${params.ySlices};
-      int clusterWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
-      int clusterHeight = int(float(${params.maxLights}+1) / 4.0) + 1;
-      float clusterU = float(clusterIdx + 1) / float(clusterWidth + 1); // like u in UnpackLight()..
+      // int clusterIdx = clusterPos.x + clusterPos.y * ${params.xSlices} + clusterPos.z * ${params.xSlices} * ${params.ySlices};
+      // int clusterWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
+      // int clusterHeight = int(float(${params.maxLights}+1) / 4.0) + 1;
+      // float clusterU = float(clusterIdx + 1) / float(clusterWidth + 1); // like u in UnpackLight()..
 
-      int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
+      // int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
 
       vec3 scat = vec3(0.0);// = muS * Li * phaseFunction();
 
       for (int j = 0; j < ${params.numLights}; j++) {
-        if(j >= numLights) {
-          break;
-        }
+        // if(j >= numLights) {
+        //   break;
+        // }
 
-        int clusterPixel = int(float(j+1) / 4.0);
-        float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
-        vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
-        int lightIdx;
-        int clusterPixelComponent = (j+1) - (clusterPixel * 4);
-        if (clusterPixelComponent == 0) {
-            lightIdx = int(texel[0]);
-        } else if (clusterPixelComponent == 1) {
-            lightIdx = int(texel[1]);
-        } else if (clusterPixelComponent == 2) {
-            lightIdx = int(texel[2]);
-        } else if (clusterPixelComponent == 3) {
-            lightIdx = int(texel[3]);
-        }
+        // int clusterPixel = int(float(j+1) / 4.0);
+        // float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
+        // vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
+        // int lightIdx;
+        // int clusterPixelComponent = (j+1) - (clusterPixel * 4);
+        // if (clusterPixelComponent == 0) {
+        //     lightIdx = int(texel[0]);
+        // } else if (clusterPixelComponent == 1) {
+        //     lightIdx = int(texel[1]);
+        // } else if (clusterPixelComponent == 2) {
+        //     lightIdx = int(texel[2]);
+        // } else if (clusterPixelComponent == 3) {
+        //     lightIdx = int(texel[3]);
+        // }
 
-        // shading
-        Light light = UnpackLight(lightIdx);
+        // // shading
+        // Light light = UnpackLight(lightIdx);
+
+        Light light = UnpackLight(j);
 
         vec3 L = (u_volTransMat * vec4(light.position, 1.0)).xyz - p;
-        vec3 Li = light.color / dot(L, L);
+        //vec3 L = light.position - (u_invVolTransMat * vec4(p, 1.0)).xyz;
+        vec3 Li = 1.0 * light.color / dot(L, L); // CHANGE THE MULTIPLIER FOR KIND OF DENSER LOOK..
         scat += muS * Li * phaseFunction();
       }
       // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
+
+      // Add directional light (sun) contribution..
+      vec3 L = (u_volTransMat * vec4(sunDir, 0.0)).xyz;
+      vec3 Li = 0.5 * sunCol / dot(L, L); // CHANGE THE MULTIPLIER FOR KIND OF DENSER LOOK..
+      scat += muS * Li * phaseFunction();
 
       float expE = exp(-muE * stepSize);
       vec3 integration = (scat - scat * expE) / muE;

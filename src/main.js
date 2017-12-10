@@ -12,7 +12,7 @@ const params = {
   renderer: CLUSTERED_DEFFERED,
   _renderer: null,
 
-  SandboxMode: true,
+  SandboxMode: false,
 
   Light1Color: [ 0, 128, 255 ],
   Light1Intensity: 1,
@@ -67,17 +67,19 @@ var sandboxFolder = gui.addFolder('Sandbox Mode');
 sandboxFolder.add(params, 'SandboxMode').onChange(setRenderer);
 
 var light1Folder = sandboxFolder.addFolder('Light 1');
-light1Folder.add(params, 'Light1PosY', 0.0, 10.0).onChange(setRenderer);
-light1Folder.add(params, 'Light1PosZ', -5.0, 5.0).onChange(setRenderer);
-light1Folder.addColor(params, 'Light1Color').onChange(setRenderer);
-light1Folder.add(params, 'Light1Intensity', 1, 30).onChange(setRenderer);
+var light1Positions = light1Folder.addFolder('Position');
+light1Positions.add(params, 'Light1PosY', 0.0, 10.0).name('Y').onChange(setRenderer);
+light1Positions.add(params, 'Light1PosZ', -5.0, 5.0).name('Z').onChange(setRenderer);
+light1Folder.addColor(params, 'Light1Color').name('Color').onChange(setRenderer);
+light1Folder.add(params, 'Light1Intensity', 1, 30).name('Intensity').onChange(setRenderer);
 light1Folder.close();
 
 var light2Folder = sandboxFolder.addFolder('Light 2');
-light2Folder.add(params, 'Light2PosX', -10, 10.0).onChange(setRenderer);
-light2Folder.add(params, 'Light2PosZ', -5.0, 5.0).onChange(setRenderer);
-light2Folder.addColor(params, 'Light2Color').onChange(setRenderer);
-light2Folder.add(params, 'Light2Intensity', 1, 30).onChange(setRenderer);
+var light2Positions = light2Folder.addFolder('Position');
+light2Positions.add(params, 'Light2PosX', -10, 10.0).name('X').onChange(setRenderer);
+light2Positions.add(params, 'Light2PosZ', -5.0, 5.0).name('Z').onChange(setRenderer);
+light2Folder.addColor(params, 'Light2Color').name('Color').onChange(setRenderer);
+light2Folder.add(params, 'Light2Intensity', 1, 30).name('Intensity').onChange(setRenderer);
 light2Folder.close();
 
 var volumeFolder = sandboxFolder.addFolder('Volume');

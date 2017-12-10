@@ -42,7 +42,7 @@ for (let i = 0; i < requiredExtensions.length; ++i) {
 
 gl.getExtension('EXT_color_buffer_float');
 
-export const gui = new DAT.GUI();
+export const gui = new DAT.GUI({name: 'My GUI'});
 
 // initialize statistics widget
 const stats = new Stats();

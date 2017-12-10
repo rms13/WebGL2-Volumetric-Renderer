@@ -32,7 +32,7 @@ const params = {
   VolumeScaleY: 1,
   VolumeScaleZ: 1,
 
-  Heterogenous: false,
+  Heterogenous: true,
   Scattering: 0.05,
   Absorption: 0.05,
 

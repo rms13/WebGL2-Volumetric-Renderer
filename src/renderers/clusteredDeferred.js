@@ -660,22 +660,30 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       renderFullscreenQuad(this._progShade);
     }
     else {
+      // if(heterogenous) {
+      //   console.log("HETEROGENOUS");
+      // }
+      // else {
+      //   console.log("HOMOGENOUS");
+      // }
+
       // Update Volume Properties
       var volPos    = vec3.fromValues(volPosX, volPosY, volPosZ); // position of the volume
       var volScale  = vec3.fromValues(volScaleX, volScaleY, volScaleZ); // scale of the volume
       var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
       quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
 
-      if(this._upscaleFactor == upscaleFactor) {
-        mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
-        mat4.invert(this.invVolTransMat, this.volTransMat);    
-        mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
-      }
-      else {
+      mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
+      mat4.invert(this.invVolTransMat, this.volTransMat);    
+      mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
+
+      if(this._upscaleFactor != upscaleFactor || this._heterogenous != heterogenous) {
         this.updateVolume(upscaleFactor, heterogenous, volPos, volScale, volOrient);
         this._upscaleFactor = upscaleFactor;  
         this._heterogenous = heterogenous;
       }
+
+        
 
 
       //--------------------------------------------------  
@@ -849,10 +857,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     for (var k = 0; k < this.SIZE; ++k) {
       for (var j = 0; j < this.SIZE; ++j) {
         for (var i = 0; i < this.SIZE; ++i) {
-          let density = 255.0 * Math.random();
-          // if(heterogenous) {
-          //   density *= Math.random();
-          // }
+          let density = 255.0;
+          if(heterogenous) {
+            density *= Math.random();
+          }
 
           this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = density;
         }

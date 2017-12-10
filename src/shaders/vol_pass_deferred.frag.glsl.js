@@ -199,8 +199,9 @@ export default function(params) {
     vec3 fragColor = vec3(0.0);
 
     // DIRECTIONAL LIGHT - SUN
+    vec3 sunDir = normalize(vec3(0.5, 4.0, 0.5));
     // vec3 sunDir = normalize(vec3(-1.0, 1.0, -1.0));
-    // vec3 sunCol = vec3(0.5, 0.5, 0.4);
+    // vec3 sunCol = 1000.0 * vec3(0.5, 0.5, 0.4);
     // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
     //vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);

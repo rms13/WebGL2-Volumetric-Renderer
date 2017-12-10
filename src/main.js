@@ -38,8 +38,8 @@ const params = {
   UpscaleFactor: 4,
   Interpolation: 0,
 
-  Debug: false,
-  Pass: 0
+  DebugVolume: false,
+  DebugShadow: false
 };
 
 setRenderer(params.renderer);
@@ -60,9 +60,13 @@ function setRenderer(renderer) {
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
 
-// var debugFolder = gui.addFolder('Debug');
-// debugFolder.add(params, 'Debug').onChange(setRenderer);
-// debugFolder.add(params, 'Pass', { 'Shadow Map': 0, /*'Positions': 1, 'Normals': 2, 'Albedo': 3,*/ 'Volume': 4})
+var debugFolder = gui.addFolder('Debug');
+debugFolder.add(params, 'DebugShadow').name('Shadow Pass').onChange(setRenderer);
+debugFolder.add(params, 'DebugVolume').name('Volume Pass').onChange(setRenderer);
+
+gui.add(params, 'Heterogenous');
+gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
+gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 
 var sandboxFolder = gui.addFolder('Sandbox Mode');
 sandboxFolder.add(params, 'SandboxMode').onChange(setRenderer);
@@ -87,9 +91,7 @@ var volumeFolder = sandboxFolder.addFolder('Volume');
 var volumePosFolder = volumeFolder.addFolder('Position');
 var volumeScaleFolder = volumeFolder.addFolder('Scale');
 var volumeCoeffsFolder = volumeFolder.addFolder('Scattering Properties');
-volumeFolder.add(params, 'Heterogenous');
-volumeFolder.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
-volumeFolder.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
+
 volumePosFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
 volumePosFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
 volumePosFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
@@ -112,8 +114,8 @@ function render() {
   scene.update();
   params._renderer.render(camera, scene, 
     // Debug
-    params.Debug,
-    params.Pass,
+    params.DebugVolume,
+    params.DebugShadow,
     // Sandbox
     params.SandboxMode, 
     params.Light1Color, params.Light1Intensity, params.Light1PosY, params.Light1PosZ, 

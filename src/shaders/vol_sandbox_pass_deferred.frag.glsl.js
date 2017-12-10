@@ -49,7 +49,7 @@ export default function(params) {
   #define DENSITY 0.5
   #define PI 3.14159265
 
-  #define NUM_STEPS 50
+  #define NUM_STEPS 100
 
   struct Light {
     vec3 position;

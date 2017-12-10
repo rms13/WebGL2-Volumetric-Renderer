@@ -120,7 +120,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_light2Col',
                   'u_light2Intensity',
                   'u_light2PosX',
-                  'u_light2PosZ'
+                  'u_light2PosZ',
+                  'u_debugVolume'
                   /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
@@ -153,7 +154,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_volPassBuffer',
                   'u_shadowMap',
                   'u_lightViewProjectionMatrix',
-                  'u_viewProjectionMatrix'
+                  'u_viewProjectionMatrix',
+                  'u_debugVolume',
+                  'u_debugShadow'
                 ],
       attribs:  [ 'a_position'  ]
     });
@@ -186,7 +189,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_shadowMap',
                   'u_lightViewProjectionMatrix',
                   'u_viewProjectionMatrix',
-                  'u_upscaleFactor'
+                  'u_upscaleFactor',
+                  'u_debugVolume',
+                  'u_debugShadow'
                 ],
       attribs:  [ 'a_position'  ]
     });
@@ -436,8 +441,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   }
 
   render(camera, scene, 
-        debugMode,
-        pass,
+        debugVolume, debugShadow,
         sandboxMode, 
         light1Col, light1Intensity, light1PosY, light1PosZ,
         light2Col, light2Intensity, light2PosX, light2PosZ,
@@ -471,6 +475,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.useProgram(this._progShadowMap.glShaderProgram);
     // Bind any uniform variables
     gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this._lightViewProjectionMatrix);
+    gl.uniform1i(this._progShadowMap.u_debugShadow, debugShadow);
     scene.draw(this._progShadowMap);
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // renderFullscreenQuad(this._progShadowMap);
@@ -532,13 +537,13 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       this._interpolationMethod = interpolation;
     }
 
-    this.renderVolumePass(volShaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+    this.renderVolumePass(volShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
       light2Col, light2Intensity, light2PosX, light2PosZ,
       volPosX, volPosY, volPosZ,
       volScaleX, volScaleY, volScaleZ,
       upscaleFactor, heterogenous, scattering, absorption);
     
-    this.renderFinalPass(finalShaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+    this.renderFinalPass(finalShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
       light2Col, light2Intensity, light2PosX, light2PosZ,
       volPosX, volPosY, volPosZ,
       volScaleX, volScaleY, volScaleZ,
@@ -604,7 +609,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // END: CREATE 3D-TEXTURE
   }
 
-  renderVolumePass(shaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+  renderVolumePass(shaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
     light2Col, light2Intensity, light2PosX, light2PosZ,
     volPosX, volPosY, volPosZ,
     volScaleX, volScaleY, volScaleZ,
@@ -646,6 +651,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniform1f(shaderProgram.u_camN, camera.near);
     gl.uniform1f(shaderProgram.u_camF, camera.far);
     gl.uniform3f(shaderProgram.u_camPos, camera.position.x, camera.position.y, camera.position.z);
+    gl.uniform1i(shaderProgram.u_debugVolume, debugVolume);
+    gl.uniform1i(shaderProgram.u_debugShadow, debugShadow);
     
     gl.uniform3f(shaderProgram.u_light1Col, light1Col[0], light1Col[1], light1Col[2]);
     gl.uniform1f(shaderProgram.u_light1Intensity, light1Intensity);
@@ -703,7 +710,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     //scene.draw(this._progVolPass);
   }
 
-  renderFinalPass(shaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+  renderFinalPass(shaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
     light2Col, light2Intensity, light2PosX, light2PosZ,
     volPosX, volPosY, volPosZ,
     volScaleX, volScaleY, volScaleZ,
@@ -716,29 +723,31 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
     // Use this shader program
-    gl.useProgram(this._progSandboxShade.glShaderProgram);
+    gl.useProgram(shaderProgram.glShaderProgram);
 
     // TODO: Bind any other shader inputs
-    gl.uniformMatrix4fv(this._progSandboxShade.u_viewMatrix, false, this._viewMatrix);
-    gl.uniformMatrix4fv(this._progSandboxShade.u_invViewMatrix, false, this._invViewMatrix);
-    gl.uniform1f(this._progSandboxShade.u_screenW, canvas.width);
-    gl.uniform1f(this._progSandboxShade.u_screenH, canvas.height);
-    gl.uniform1f(this._progSandboxShade.u_camN, camera.near);
-    gl.uniform1f(this._progSandboxShade.u_camF, camera.far);
-    gl.uniform3f(this._progSandboxShade.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-    gl.uniformMatrix4fv(this._progSandboxShade.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-    gl.uniformMatrix4fv(this._progSandboxShade.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
+    gl.uniformMatrix4fv(shaderProgram.u_viewMatrix, false, this._viewMatrix);
+    gl.uniformMatrix4fv(shaderProgram.u_invViewMatrix, false, this._invViewMatrix);
+    gl.uniform1f(shaderProgram.u_screenW, canvas.width);
+    gl.uniform1f(shaderProgram.u_screenH, canvas.height);
+    gl.uniform1f(shaderProgram.u_camN, camera.near);
+    gl.uniform1f(shaderProgram.u_camF, camera.far);
+    gl.uniform3f(shaderProgram.u_camPos, camera.position.x, camera.position.y, camera.position.z);
+    gl.uniformMatrix4fv(shaderProgram.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    gl.uniformMatrix4fv(shaderProgram.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
+    gl.uniform1i(shaderProgram.u_debugVolume, debugVolume);
+    gl.uniform1i(shaderProgram.u_debugShadow, debugShadow);
     
-    gl.uniform1f(this._progSandboxShade.u_volSize, this.SIZE);
-    gl.uniform1f(this._progSandboxShade.u_upscaleFactor, 1 / Math.sqrt(upscaleFactor));
+    gl.uniform1f(shaderProgram.u_volSize, this.SIZE);
+    gl.uniform1f(shaderProgram.u_upscaleFactor, 1 / Math.sqrt(upscaleFactor));
     // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-    gl.uniformMatrix4fv(this._progSandboxShade.u_volTransMat, false, this.volTransMat);
-    gl.uniformMatrix4fv(this._progSandboxShade.u_invVolTransMat, false, this.invVolTransMat);
-    gl.uniformMatrix4fv(this._progSandboxShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
+    gl.uniformMatrix4fv(shaderProgram.u_volTransMat, false, this.volTransMat);
+    gl.uniformMatrix4fv(shaderProgram.u_invVolTransMat, false, this.invVolTransMat);
+    gl.uniformMatrix4fv(shaderProgram.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
 
     // if(this.framenum === undefined) this.framenum = 0.0;
     // this.framenum+=0.05;
-    gl.uniform1f(this._progSandboxShade.u_time, this.framenum);
+    gl.uniform1f(shaderProgram.u_time, this.framenum);
     // if(this.t0 === undefined) {
     //   this.t0 = performance.now();
     //   gl.uniform1f(this._progShade.u_time, 0);
@@ -752,42 +761,42 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Bind g-buffers
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-    gl.uniform1i(this._progSandboxShade[`u_gbuffers[0]`], 0);
+    gl.uniform1i(shaderProgram[`u_gbuffers[0]`], 0);
 
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-    gl.uniform1i(this._progSandboxShade[`u_gbuffers[1]`], 1);
+    gl.uniform1i(shaderProgram[`u_gbuffers[1]`], 1);
 
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-    gl.uniform1i(this._progSandboxShade[`u_gbuffers[2]`], 2);
+    gl.uniform1i(shaderProgram[`u_gbuffers[2]`], 2);
 
     // bind volume pass texture
     gl.activeTexture(gl.TEXTURE3);
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    gl.uniform1i(this._progSandboxShade[`u_volPassBuffer`], 3);
+    gl.uniform1i(shaderProgram[`u_volPassBuffer`], 3);
 
     gl.activeTexture(gl.TEXTURE4);
     gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-    gl.uniform1i(this._progSandboxShade[`u_shadowMap`], 4);
+    gl.uniform1i(shaderProgram[`u_shadowMap`], 4);
 
     // Bind the light and cluster textures...
     // Set the light texture as a uniform input to the shader
     gl.activeTexture(gl.TEXTURE5);
     gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
-    gl.uniform1i(this._progSandboxShade.u_lightbuffer, 5);
+    gl.uniform1i(shaderProgram.u_lightbuffer, 5);
 
     // Set the cluster texture as a uniform input to the shader
     gl.activeTexture(gl.TEXTURE6);
     gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
-    gl.uniform1i(this._progSandboxShade.u_clusterbuffer, 6);
+    gl.uniform1i(shaderProgram.u_clusterbuffer, 6);
 
     // bind 3d volume texture
     gl.activeTexture(gl.TEXTURE7);
     gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
-    gl.uniform1i(this._progSandboxShade.u_volBuffer, 7);
+    gl.uniform1i(shaderProgram.u_volBuffer, 7);
 
-    renderFullscreenQuad(this._progSandboxShade); 
+    renderFullscreenQuad(shaderProgram); 
   }
 
   updateVolume2D(interpolation, width, height)

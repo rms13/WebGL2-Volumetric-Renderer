@@ -26,6 +26,9 @@ export default function(params) {
   uniform mat4 u_viewProjectionMatrixLight;
   uniform mat4 u_lightViewProjectionMatrix;
   
+  uniform int u_debugVolume;
+  uniform int u_debugShadow;
+
   uniform float u_upscaleFactor;
 
   uniform float u_screenW;
@@ -49,7 +52,7 @@ export default function(params) {
   #define DENSITY 0.5
   #define PI 3.14159265
 
-  #define NUM_STEPS 50
+  #define NUM_STEPS 100
   
   float shadowMap(vec3 pos, vec3 nor, vec3 col)
   {
@@ -74,6 +77,29 @@ export default function(params) {
 
     // return albedo * visibility;
     return visibility;
+  }
+
+  vec3 debugShadowMap(vec3 pos, vec3 nor, vec3 col)
+  {
+    vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
+    vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(pos, 1.0);
+    // Remove some shadow acne
+    lightPosition.z -= 0.007;
+
+    // Get the light direction from the point to the light
+    vec4 lightDir     = normalize(vec4(0.0,0.0,0.0,1.0) - lightPosition);
+    // vec4 lightDir     = normalize(position - lightPosition);
+    vec3 shadowCoord  = (lightPosition.xyz / lightPosition.w) / 2.0 + 0.5;
+
+    vec3 sunCol       = vec3(0.5, 0.5, 0.4);
+    vec4 rgbaDepth    = texture(u_shadowMap, shadowCoord.xy);
+    float depth       = rgbaDepth.r; // Retrieve the z-value from R
+    float visibility  = (shadowCoord.z > depth + 0.005)? 0.1 : 1.0;
+    // out_Color = vec4(shadowCoord, 1.0);
+    float dotprod     = dot(lightDir.xyz, nor);
+    vec3 albedo       = col * sunCol * max(dotprod, 0.05);
+
+    return albedo * visibility;
   }
 
   struct Light {
@@ -224,6 +250,19 @@ export default function(params) {
 
     //fragColor = vec3(float(clusterPos.z)/16.0);
     out_Color = vec4(fragColor.xyz, 1.0);
+
+    // DEBUG VIEWS
+    if(u_debugVolume == 1) {
+      out_Color = vec4(10.0 * volTexSample00.xyz, 1.0);
+    }
+
+    if(u_debugShadow == 1) {
+      out_Color = vec4(debugShadowMap(v_position, normal, albedo), 1.0);
+    }
+
+    if(u_debugShadow == 1 && u_debugVolume == 1) {
+      out_Color = vec4(debugShadowMap(v_position, normal, albedo), 1.0) + vec4(10.0 * volTexSample00.xyz, 1.0);
+    }
   }
   `;
 }

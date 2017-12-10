@@ -11,7 +11,9 @@ const CLUSTERED_DEFFERED = 'Clustered Deferred';
 const params = {
   renderer: CLUSTERED_DEFFERED,
   _renderer: null,
+
   SandboxMode: false,
+
   Light1Color: [ 0, 128, 255 ],
   Light1Intensity: 1,
   Light1PosY: 0.0,
@@ -21,6 +23,10 @@ const params = {
   Light2Intensity: 1,
   Light2PosX: 0.0,
   Light2PosZ: 0.0,
+
+  VolumePosX: 0,
+  VolumePosY: -4,
+  VolumePosZ: 0
 };
 
 setRenderer(params.renderer);
@@ -62,6 +68,12 @@ light2Folder.addColor(params, 'Light2Color').onChange(setRenderer);
 light2Folder.add(params, 'Light2Intensity', 1, 30).onChange(setRenderer);
 light2Folder.close();
 
+var volumeFolder = sandboxFolder.addFolder('Volume');
+volumeFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
+volumeFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
+volumeFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
+volumeFolder.close();
+
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
 // scene.loadGLTF('models/box/box.gltf');
@@ -74,7 +86,8 @@ function render() {
   scene.update();
   params._renderer.render(camera, scene, params.SandboxMode, 
     params.Light1Color, params.Light1Intensity, params.Light1PosY, params.Light1PosZ, 
-    params.Light2Color, params.Light2Intensity, params.Light2PosX, params.Light2PosZ);
+    params.Light2Color, params.Light2Intensity, params.Light2PosX, params.Light2PosZ,
+    params.VolumePosX, params.VolumePosY, params.VolumePosZ);
 }
 
 makeRenderLoop(render)();

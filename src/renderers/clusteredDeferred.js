@@ -28,8 +28,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightTexture = new TextureBuffer(NUM_LIGHTS, 8);
 
     // Create a 3D texture to store volume
-    // this.createVolumeBuffer(vec3.fromValues(0,-4,0));
-    this.createVolumeBuffer(vec3.fromValues(0,15,0));
+    this.createVolumeBuffer(vec3.fromValues(0,-4,0));
+    // this.createVolumeBuffer(vec3.fromValues(0,15,0));
 
     this._progShadowMap = loadShaderProgram(shadowVert, shadowFrag({}), {
       uniforms: [ 'u_viewProjectionMatrix', 
@@ -356,8 +356,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       }
     }
 
-    var volPos = vec3.fromValues(0, -4, 0); // position of the volume
-    // var volPos = pos; // position of the volume
+    // var volPos = vec3.fromValues(0, -4, 0); // position of the volume
+    var volPos = pos; // position of the volume
     var volScale = vec3.fromValues(1,1,1); // scale of the volume
     var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
     quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
@@ -424,8 +424,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   }
 
   render(camera, scene, sandboxMode, 
-    light1Col, light1Intensity, light1PosY, light1PosZ,
-    light2Col, light2Intensity, light2PosX, light2PosZ) {
+        light1Col, light1Intensity, light1PosY, light1PosZ,
+        light2Col, light2Intensity, light2PosX, light2PosZ,
+        volPosX, volPosY, volPosZ) 
+  {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);
     }
@@ -649,6 +651,16 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       renderFullscreenQuad(this._progShade);
     }
     else {
+      // this.createVolumeBuffer(vec3.fromValues(volPosX, volPosY, volPosZ));
+      var volPos    = vec3.fromValues(volPosX, volPosY, volPosZ); // position of the volume
+      var volScale  = vec3.fromValues(1,1,1); // scale of the volume
+      var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
+      quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
+
+      mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
+      mat4.invert(this.invVolTransMat, this.volTransMat);    
+      mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
+
       //--------------------------------------------------  
       // Volume Pass
       //--------------------------------------------------              

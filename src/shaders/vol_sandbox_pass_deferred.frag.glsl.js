@@ -15,10 +15,15 @@ export default function(params) {
 
   in vec2 v_uv;
 
-  uniform vec3 u_lightCol;
-  uniform float u_lightIntensity;
-  uniform float u_lightPosY;
-  uniform float u_lightPosZ;
+  uniform vec3 u_light1Col;
+  uniform float u_light1Intensity;
+  uniform float u_light1PosY;
+  uniform float u_light1PosZ;
+
+  uniform vec3 u_light2Col;
+  uniform float u_light2Intensity;
+  uniform float u_light2PosX;
+  uniform float u_light2PosZ;
 
   uniform sampler2D u_clusterbuffer;
   uniform mat4 u_viewMatrix;
@@ -309,14 +314,25 @@ export default function(params) {
       // }
       // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
 
-      vec3 lightPos2 = vec3(2.0 * 1.0 * sin(u_time * 0.5), u_lightPosY, u_lightPosZ);
+      vec3 lightPos = vec3(u_light2PosX, 2.0 * 1.0 * sin(u_time * 0.5) + 4.0, u_light2PosZ);
       // vec3 lightPos = vec3(0.0, 3.0, 0.0);
       // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
       // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
-      vec3 lightCol2 = u_lightIntensity * vec3(1.0, 0.0, 0.0);
+      // vec3 lightCol = 1000.0 * vec3(0.0, 0.0, 1.0);
+
+      vec3 _L = (u_volTransMat * vec4(lightPos, 1.0)).xyz - p;
+      vec3 _Li = u_light2Intensity * u_light2Col / dot(_L, _L);
+      scat += muS * _Li * phaseFunction();
+
+
+      vec3 lightPos2 = vec3(2.0 * 1.0 * sin(u_time * 0.5), u_light1PosY, u_light1PosZ);
+      // vec3 lightPos = vec3(0.0, 3.0, 0.0);
+      // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
+      // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
+      vec3 lightCol2 = u_light1Intensity * vec3(1.0, 0.0, 0.0);
 
       vec3 L = (u_volTransMat * vec4(lightPos2, 1.0)).xyz - p;
-      vec3 Li = u_lightIntensity * u_lightCol / dot(L, L);
+      vec3 Li = u_light1Intensity * u_light1Col / dot(L, L);
       scat += muS * Li * phaseFunction();
 
       float expE = exp(-muE * stepSize);

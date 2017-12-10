@@ -16,6 +16,11 @@ const params = {
   PointLight1Intensity: 1,
   PointLight1Y: 0.0,
   PointLight1Z: 0.0,
+
+  PointLight2: [ 1, 0, 0 ],
+  PointLight2Intensity: 1,
+  PointLight2X: 0.0,
+  PointLight2Z: 0.0,
 };
 
 setRenderer(params.renderer);
@@ -40,6 +45,10 @@ gui.add(params, 'PointLight1Y', 0.0, 10.0).onChange(setRenderer);
 gui.add(params, 'PointLight1Z', -5.0, 5.0).onChange(setRenderer);
 gui.addColor(params, 'PointLight1').onChange(setRenderer);
 gui.add(params, 'PointLight1Intensity', 1, 30).onChange(setRenderer);
+gui.add(params, 'PointLight2X', -10, 10.0).onChange(setRenderer);
+gui.add(params, 'PointLight2Z', -5.0, 5.0).onChange(setRenderer);
+gui.addColor(params, 'PointLight2').onChange(setRenderer);
+gui.add(params, 'PointLight2Intensity', 1, 30).onChange(setRenderer);
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
@@ -51,7 +60,9 @@ gl.enable(gl.DEPTH_TEST);
 
 function render() {
   scene.update();
-  params._renderer.render(camera, scene, params.SandboxMode, params.PointLight1, params.PointLight1Intensity, params.PointLight1Y, params.PointLight1Z);
+  params._renderer.render(camera, scene, params.SandboxMode, 
+    params.PointLight1, params.PointLight1Intensity, params.PointLight1Y, params.PointLight1Z, 
+    params.PointLight2, params.PointLight2Intensity, params.PointLight2X, params.PointLight2Z);
 }
 
 makeRenderLoop(render)();

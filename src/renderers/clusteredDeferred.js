@@ -75,8 +75,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_viewProjectionMatrix',
                   'u_lightViewProjectionMatrix',
                   'u_shadowMap',
-                  'u_lightCol',
-                  'u_lightIntensity'
                   /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
@@ -109,10 +107,14 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_viewProjectionMatrix',
                   'u_lightViewProjectionMatrix',
                   'u_shadowMap',
-                  'u_lightCol',
-                  'u_lightIntensity',
-                  'u_lightPosY',
-                  'u_lightPosZ'
+                  'u_light1Col',
+                  'u_light1Intensity',
+                  'u_light1PosY',
+                  'u_light1PosZ',
+                  'u_light2Col',
+                  'u_light2Intensity',
+                  'u_light2PosX',
+                  'u_light2PosZ'
                   /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
@@ -421,7 +423,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
-  render(camera, scene, sandboxMode, lightCol, lightIntensity, lightPosY, lightPosZ) {
+  render(camera, scene, sandboxMode, 
+    light1Col, light1Intensity, light1PosY, light1PosZ,
+    light2Col, light2Intensity, light2PosX, light2PosZ) {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);
     }
@@ -516,8 +520,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       gl.uniform1f(this._progVolPass.u_camN, camera.near);
       gl.uniform1f(this._progVolPass.u_camF, camera.far);
       gl.uniform3f(this._progVolPass.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-      gl.uniform3f(this._progVolPass.u_lightCol, lightCol[0], lightCol[1], lightCol[2]);
-      gl.uniform1f(this._progVolPass.u_lightIntensity, lightIntensity);
       
       gl.uniform1f(this._progVolPass.u_volSize, this.SIZE);
       // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
@@ -667,10 +669,16 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       gl.uniform1f(this._progVolSandboxPass.u_camN, camera.near);
       gl.uniform1f(this._progVolSandboxPass.u_camF, camera.far);
       gl.uniform3f(this._progVolSandboxPass.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-      gl.uniform3f(this._progVolSandboxPass.u_lightCol, lightCol[0], lightCol[1], lightCol[2]);
-      gl.uniform1f(this._progVolSandboxPass.u_lightIntensity, lightIntensity);
-      gl.uniform1f(this._progVolSandboxPass.u_lightPosY, lightPosY);
-      gl.uniform1f(this._progVolSandboxPass.u_lightPosZ, lightPosZ);
+      
+      gl.uniform3f(this._progVolSandboxPass.u_light1Col, light1Col[0], light1Col[1], light1Col[2]);
+      gl.uniform1f(this._progVolSandboxPass.u_light1Intensity, light1Intensity);
+      gl.uniform1f(this._progVolSandboxPass.u_light1PosY, light1PosY);
+      gl.uniform1f(this._progVolSandboxPass.u_light1PosZ, light1PosZ);
+
+      gl.uniform3f(this._progVolSandboxPass.u_light2Col, light2Col[0], light2Col[1], light2Col[2]);
+      gl.uniform1f(this._progVolSandboxPass.u_light2Intensity, light2Intensity);
+      gl.uniform1f(this._progVolSandboxPass.u_light2PosX, light2PosX);
+      gl.uniform1f(this._progVolSandboxPass.u_light2PosZ, light2PosZ);
       
       gl.uniform1f(this._progVolSandboxPass.u_volSize, this.SIZE);
       // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);

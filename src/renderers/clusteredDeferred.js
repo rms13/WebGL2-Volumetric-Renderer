@@ -430,7 +430,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
 
-  render(camera, scene, sandboxMode, 
+  render(camera, scene, 
+        debugMode,
+        pass,
+        sandboxMode, 
         light1Col, light1Intensity, light1PosY, light1PosZ,
         light2Col, light2Intensity, light2PosX, light2PosZ,
         volPosX, volPosY, volPosZ,

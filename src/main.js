@@ -1,4 +1,4 @@
-import { makeRenderLoop, camera, cameraControls, gui, sandboxGUI, gl } from './init';
+import { makeRenderLoop, camera, cameraControls, gui, sandboxGUI, gl, DEBUG } from './init';
 import ForwardRenderer from './renderers/forward';
 import ClusteredForwardPlusRenderer from './renderers/clusteredForwardPlus';
 import ClusteredDeferredRenderer from './renderers/clusteredDeferred';
@@ -35,8 +35,10 @@ const params = {
   Heterogenous: true,
   Scattering: 0.05,
   Absorption: 0.05,
+  UpscaleFactor: 32,
 
-  UpscaleFactor: 32
+  Debug: false,
+  Pass: 0
 };
 
 setRenderer(params.renderer);
@@ -53,13 +55,13 @@ function setRenderer(renderer) {
       params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
       break;
   }
-
-  // if(params.SandboxMode) {
-  //   light1Folder.open();
-  // }
 }
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
+
+// var debugFolder = gui.addFolder('Debug');
+// debugFolder.add(params, 'Debug').onChange(setRenderer);
+// debugFolder.add(params, 'Pass', { 'Shadow Map': 0, /*'Positions': 1, 'Normals': 2, 'Albedo': 3,*/ 'Volume': 4})
 
 var sandboxFolder = gui.addFolder('Sandbox Mode');
 sandboxFolder.add(params, 'SandboxMode').onChange(setRenderer);
@@ -104,7 +106,12 @@ gl.enable(gl.DEPTH_TEST);
 
 function render() {
   scene.update();
-  params._renderer.render(camera, scene, params.SandboxMode, 
+  params._renderer.render(camera, scene, 
+    // Debug
+    params.Debug,
+    params.Pass,
+    // Sandbox
+    params.SandboxMode, 
     params.Light1Color, params.Light1Intensity, params.Light1PosY, params.Light1PosZ, 
     params.Light2Color, params.Light2Intensity, params.Light2PosX, params.Light2PosZ,
     params.VolumePosX, params.VolumePosY, params.VolumePosZ,

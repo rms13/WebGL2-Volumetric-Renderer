@@ -28,7 +28,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightTexture = new TextureBuffer(NUM_LIGHTS, 8);
 
     // Create a 3D texture to store volume
-    this.createVolumeBuffer(vec3.fromValues(0,-4,0));
+    this._upscaleFactor = 32;
+    this._heterogenous = true;
+    this.createVolumeBuffer(vec3.fromValues(0,-4,0), this._upscaleFactor, this._heterogenous);
     // this.createVolumeBuffer(vec3.fromValues(0,15,0));
 
     this._progShadowMap = loadShaderProgram(shadowVert, shadowFrag({}), {
@@ -342,16 +344,21 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 
-  createVolumeBuffer(pos) {
+  createVolumeBuffer(pos, upscaleFactor, heterogenous) {
     // CREATE AND BING THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
-    this.SIZE = 32;
+    this.SIZE = upscaleFactor;
     var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
     this.data = new Uint8Array(this.SIZE * this.SIZE * this.SIZE);
     for (var k = 0; k < this.SIZE; ++k) {
       for (var j = 0; j < this.SIZE; ++j) {
         for (var i = 0; i < this.SIZE; ++i) {
-          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
+          let density = 255.0 * Math.random();
+          // if(heterogenous) {
+          //   density *= Math.random();
+          // }
+
+          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = density;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
         }
       }
     }
@@ -426,7 +433,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   render(camera, scene, sandboxMode, 
         light1Col, light1Intensity, light1PosY, light1PosZ,
         light2Col, light2Intensity, light2PosX, light2PosZ,
-        volPosX, volPosY, volPosZ) 
+        volPosX, volPosY, volPosZ,
+        volScaleX, volScaleY, volScaleZ,
+        upscaleFactor, heterogenous, scattering, absorption) 
   {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);
@@ -651,15 +660,23 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       renderFullscreenQuad(this._progShade);
     }
     else {
-      // this.createVolumeBuffer(vec3.fromValues(volPosX, volPosY, volPosZ));
+      // Update Volume Properties
       var volPos    = vec3.fromValues(volPosX, volPosY, volPosZ); // position of the volume
-      var volScale  = vec3.fromValues(1,1,1); // scale of the volume
+      var volScale  = vec3.fromValues(volScaleX, volScaleY, volScaleZ); // scale of the volume
       var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
       quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
 
-      mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
-      mat4.invert(this.invVolTransMat, this.volTransMat);    
-      mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
+      if(this._upscaleFactor == upscaleFactor) {
+        mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
+        mat4.invert(this.invVolTransMat, this.volTransMat);    
+        mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
+      }
+      else {
+        this.updateVolume(upscaleFactor, heterogenous, volPos, volScale, volOrient);
+        this._upscaleFactor = upscaleFactor;  
+        this._heterogenous = heterogenous;
+      }
+
 
       //--------------------------------------------------  
       // Volume Pass
@@ -819,6 +836,64 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
       renderFullscreenQuad(this._progSandboxShade); 
     }
-    
+  }
+
+  updateVolume(upscaleFactor, heterogenous, pos, scale, orient)
+  {
+    gl.deleteTexture(this._volBuffer);
+    // CREATE AND BING THE 3D-TEXTURE
+    // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
+    this.SIZE = upscaleFactor;
+    var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
+    this.data = new Uint8Array(this.SIZE * this.SIZE * this.SIZE);
+    for (var k = 0; k < this.SIZE; ++k) {
+      for (var j = 0; j < this.SIZE; ++j) {
+        for (var i = 0; i < this.SIZE; ++i) {
+          let density = 255.0 * Math.random();
+          // if(heterogenous) {
+          //   density *= Math.random();
+          // }
+
+          this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = density;
+        }
+      }
+    }
+
+    // var volPos = vec3.fromValues(0, -4, 0); // position of the volume
+    var volPos = pos; // position of the volume
+    var volScale = vec3.fromValues(1,1,1); // scale of the volume
+    var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
+    quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
+
+    this.volTransMat = mat4.create();
+    mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
+    this.invVolTransMat = mat4.create();
+    mat4.invert(this.invVolTransMat, this.volTransMat);    
+    this.invTranspVolTransMat = mat4.create();
+    mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
+
+    this._volBuffer = gl.createTexture();
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_BASE_LEVEL, 0);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAX_LEVEL, Math.log2(this.SIZE));
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    gl.texImage3D(
+      gl.TEXTURE_3D,  // target
+      0,              // level
+      gl.R8,        // internalformat
+      this.SIZE,           // width
+      this.SIZE,           // height
+      this.SIZE,           // depth
+      0,              // border
+      gl.RED,         // format
+      gl.UNSIGNED_BYTE,       // type
+      this.data            // pixel
+    );
+    gl.generateMipmap(gl.TEXTURE_3D);
+    gl.bindTexture(gl.TEXTURE_3D, null);
+    // gl.uniform1i(this._shaderProgram.u_volBuffer, 0);
+    // END: CREATE 3D-TEXTURE
   }
 };

@@ -12,7 +12,7 @@ const params = {
   renderer: CLUSTERED_DEFFERED,
   _renderer: null,
 
-  SandboxMode: false,
+  SandboxMode: true,
 
   Light1Color: [ 0, 128, 255 ],
   Light1Intensity: 1,
@@ -26,7 +26,17 @@ const params = {
 
   VolumePosX: 0,
   VolumePosY: -4,
-  VolumePosZ: 0
+  VolumePosZ: 0,
+
+  VolumeScaleX: 1,
+  VolumeScaleY: 1,
+  VolumeScaleZ: 1,
+
+  Heterogenous: false,
+  Scattering: 0.05,
+  Absorption: 0.05,
+
+  UpscaleFactor: 32
 };
 
 setRenderer(params.renderer);
@@ -44,9 +54,9 @@ function setRenderer(renderer) {
       break;
   }
 
-  if(params.SandboxMode) {
-    light1Folder.open();
-  }
+  // if(params.SandboxMode) {
+  //   light1Folder.open();
+  // }
 }
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
@@ -69,9 +79,19 @@ light2Folder.add(params, 'Light2Intensity', 1, 30).onChange(setRenderer);
 light2Folder.close();
 
 var volumeFolder = sandboxFolder.addFolder('Volume');
-volumeFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
-volumeFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
-volumeFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
+var volumePosFolder = volumeFolder.addFolder('Position');
+var volumeScaleFolder = volumeFolder.addFolder('Scale');
+var volumeCoeffsFolder = volumeFolder.addFolder('Scattering Properties');
+volumeFolder.add(params, 'Heterogenous');
+volumeFolder.add(params, 'UpscaleFactor', { '1/2': 2, '1/4': 4, '1/16': 16, '1/32': 32 });
+volumePosFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
+volumePosFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
+volumePosFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
+volumeScaleFolder.add(params, 'VolumeScaleX', 0.25, 4).onChange(setRenderer);
+volumeScaleFolder.add(params, 'VolumeScaleY', 0.25, 4).onChange(setRenderer);
+volumeScaleFolder.add(params, 'VolumeScaleZ', 0.25, 4).onChange(setRenderer);
+volumeCoeffsFolder.add(params, 'Scattering', 0.25, 4).onChange(setRenderer);
+volumeCoeffsFolder.add(params, 'Absorption', 0.25, 4).onChange(setRenderer);
 volumeFolder.close();
 
 const scene = new Scene();
@@ -87,7 +107,9 @@ function render() {
   params._renderer.render(camera, scene, params.SandboxMode, 
     params.Light1Color, params.Light1Intensity, params.Light1PosY, params.Light1PosZ, 
     params.Light2Color, params.Light2Intensity, params.Light2PosX, params.Light2PosZ,
-    params.VolumePosX, params.VolumePosY, params.VolumePosZ);
+    params.VolumePosX, params.VolumePosY, params.VolumePosZ,
+    params.VolumeScaleX, params.VolumeScaleY, params.VolumeScaleZ,
+    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption);
 }
 
 makeRenderLoop(render)();

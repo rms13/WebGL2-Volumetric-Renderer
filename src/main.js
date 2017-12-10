@@ -12,15 +12,15 @@ const params = {
   renderer: CLUSTERED_DEFFERED,
   _renderer: null,
   SandboxMode: false,
-  PointLight1: [ 0, 128, 255 ],
-  PointLight1Intensity: 1,
-  PointLight1Y: 0.0,
-  PointLight1Z: 0.0,
+  Light1Color: [ 0, 128, 255 ],
+  Light1Intensity: 1,
+  Light1PosY: 0.0,
+  Light1PosZ: 0.0,
 
-  PointLight2: [ 1, 0, 0 ],
-  PointLight2Intensity: 1,
-  PointLight2X: 0.0,
-  PointLight2Z: 0.0,
+  Light2Color: [ 1, 0, 0 ],
+  Light2Intensity: 1,
+  Light2PosX: 0.0,
+  Light2PosZ: 0.0,
 };
 
 setRenderer(params.renderer);
@@ -37,18 +37,30 @@ function setRenderer(renderer) {
       params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
       break;
   }
+
+  if(params.SandboxMode) {
+    light1Folder.open();
+  }
 }
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
-gui.add(params, 'SandboxMode').onChange(setRenderer);
-gui.add(params, 'PointLight1Y', 0.0, 10.0).onChange(setRenderer);
-gui.add(params, 'PointLight1Z', -5.0, 5.0).onChange(setRenderer);
-gui.addColor(params, 'PointLight1').onChange(setRenderer);
-gui.add(params, 'PointLight1Intensity', 1, 30).onChange(setRenderer);
-gui.add(params, 'PointLight2X', -10, 10.0).onChange(setRenderer);
-gui.add(params, 'PointLight2Z', -5.0, 5.0).onChange(setRenderer);
-gui.addColor(params, 'PointLight2').onChange(setRenderer);
-gui.add(params, 'PointLight2Intensity', 1, 30).onChange(setRenderer);
+
+var sandboxFolder = gui.addFolder('Sandbox Mode');
+sandboxFolder.add(params, 'SandboxMode').onChange(setRenderer);
+
+var light1Folder = sandboxFolder.addFolder('Light 1');
+light1Folder.add(params, 'Light1PosY', 0.0, 10.0).onChange(setRenderer);
+light1Folder.add(params, 'Light1PosZ', -5.0, 5.0).onChange(setRenderer);
+light1Folder.addColor(params, 'Light1Color').onChange(setRenderer);
+light1Folder.add(params, 'Light1Intensity', 1, 30).onChange(setRenderer);
+light1Folder.close();
+
+var light2Folder = sandboxFolder.addFolder('Light 2');
+light2Folder.add(params, 'Light2PosX', -10, 10.0).onChange(setRenderer);
+light2Folder.add(params, 'Light2PosZ', -5.0, 5.0).onChange(setRenderer);
+light2Folder.addColor(params, 'Light2Color').onChange(setRenderer);
+light2Folder.add(params, 'Light2Intensity', 1, 30).onChange(setRenderer);
+light2Folder.close();
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
@@ -61,8 +73,8 @@ gl.enable(gl.DEPTH_TEST);
 function render() {
   scene.update();
   params._renderer.render(camera, scene, params.SandboxMode, 
-    params.PointLight1, params.PointLight1Intensity, params.PointLight1Y, params.PointLight1Z, 
-    params.PointLight2, params.PointLight2Intensity, params.PointLight2X, params.PointLight2Z);
+    params.Light1Color, params.Light1Intensity, params.Light1PosY, params.Light1PosZ, 
+    params.Light2Color, params.Light2Intensity, params.Light2PosX, params.Light2PosZ);
 }
 
 makeRenderLoop(render)();

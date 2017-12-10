@@ -186,51 +186,51 @@ export default function(params) {
 
     //vec3 scat = vec3(0.0);// = muS * Li * phaseFunction();
 
-    for (int j = 0; j < ${params.numLights}; j++) {
-      if(j >= numLights) {
-        break;
-      }
+    // for (int j = 0; j < ${params.numLights}; j++) {
+    //   if(j >= numLights) {
+    //     break;
+    //   }
 
-      int clusterPixel = int(float(j+1) / 4.0);
-      float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
-      vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
-      int lightIdx;
-      int clusterPixelComponent = (j+1) - (clusterPixel * 4);
-      if (clusterPixelComponent == 0) {
-          lightIdx = int(texel[0]);
-      } else if (clusterPixelComponent == 1) {
-          lightIdx = int(texel[1]);
-      } else if (clusterPixelComponent == 2) {
-          lightIdx = int(texel[2]);
-      } else if (clusterPixelComponent == 3) {
-          lightIdx = int(texel[3]);
-      }
+    //   int clusterPixel = int(float(j+1) / 4.0);
+    //   float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
+    //   vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
+    //   int lightIdx;
+    //   int clusterPixelComponent = (j+1) - (clusterPixel * 4);
+    //   if (clusterPixelComponent == 0) {
+    //       lightIdx = int(texel[0]);
+    //   } else if (clusterPixelComponent == 1) {
+    //       lightIdx = int(texel[1]);
+    //   } else if (clusterPixelComponent == 2) {
+    //       lightIdx = int(texel[2]);
+    //   } else if (clusterPixelComponent == 3) {
+    //       lightIdx = int(texel[3]);
+    //   }
 
-      // shading
-      Light light = UnpackLight(lightIdx);
-      float lightDistance = distance(light.position, v_position);
-      vec3 L = (light.position - v_position) / lightDistance;
+    //   // shading
+    //   Light light = UnpackLight(lightIdx);
+    //   float lightDistance = distance(light.position, v_position);
+    //   vec3 L = (light.position - v_position) / lightDistance;
 
-      float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
-      float lambertTerm = max(dot(L, normal), 0.0);
+    //   float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
+    //   float lambertTerm = max(dot(L, normal), 0.0);
 
-      float specular = 0.0;
-      // blinn-phong shading... https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model
-      vec3 viewDir = normalize(u_camPos - v_position);
-      vec3 halfDir = normalize(L + viewDir);
-      float specAngle = max(dot(halfDir, normal), 0.0);
-      specular = pow(specAngle, 100.0); // 100 -> shininess
+    //   float specular = 0.0;
+    //   // blinn-phong shading... https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model
+    //   vec3 viewDir = normalize(u_camPos - v_position);
+    //   vec3 halfDir = normalize(L + viewDir);
+    //   float specAngle = max(dot(halfDir, normal), 0.0);
+    //   specular = pow(specAngle, 100.0); // 100 -> shininess
 
-      fragColor += (albedo + vec3(specular)) * lambertTerm * light.color * vec3(lightIntensity);
+    //   fragColor += (albedo + vec3(specular)) * lambertTerm * light.color * vec3(lightIntensity);
 
-      // vec3 L = (u_volTransMat * vec4((light.position - v_position), 1.0)).xyz;
-      // float distL = length(L);
-      // vec3 lightDir = L / (distL);
-      // vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
-      // vec3 Li = max(0.0, dot(normalVol, lightDir)) * light.color / (distL * distL);
+    //   // vec3 L = (u_volTransMat * vec4((light.position - v_position), 1.0)).xyz;
+    //   // float distL = length(L);
+    //   // vec3 lightDir = L / (distL);
+    //   // vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
+    //   // vec3 Li = max(0.0, dot(normalVol, lightDir)) * light.color / (distL * distL);
 
-      //fragColor += (albedo / PI) * Li;
-    }
+    //   //fragColor += (albedo / PI) * Li;
+    // }
     // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
 
 #define VOLUME

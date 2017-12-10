@@ -1,4 +1,4 @@
-import { makeRenderLoop, camera, cameraControls, gui, gl } from './init';
+import { makeRenderLoop, camera, cameraControls, gui, sandboxGUI, gl } from './init';
 import ForwardRenderer from './renderers/forward';
 import ClusteredForwardPlusRenderer from './renderers/clusteredForwardPlus';
 import ClusteredDeferredRenderer from './renderers/clusteredDeferred';
@@ -11,8 +11,11 @@ const CLUSTERED_DEFFERED = 'Clustered Deferred';
 const params = {
   renderer: CLUSTERED_DEFFERED,
   _renderer: null,
+  SandboxMode: false,
   PointLight1: [ 0, 128, 255 ],
-  PointLight1Intensity: 1
+  PointLight1Intensity: 1,
+  PointLight1Y: 0.0,
+  PointLight1Z: 0.0,
 };
 
 setRenderer(params.renderer);
@@ -32,8 +35,11 @@ function setRenderer(renderer) {
 }
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
+gui.add(params, 'SandboxMode').onChange(setRenderer);
+gui.add(params, 'PointLight1Y', 0.0, 10.0).onChange(setRenderer);
+gui.add(params, 'PointLight1Z', -5.0, 5.0).onChange(setRenderer);
 gui.addColor(params, 'PointLight1').onChange(setRenderer);
-gui.add(params, 'PointLight1Intensity', 1, 100).onChange(setRenderer);
+gui.add(params, 'PointLight1Intensity', 1, 30).onChange(setRenderer);
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
@@ -45,7 +51,7 @@ gl.enable(gl.DEPTH_TEST);
 
 function render() {
   scene.update();
-  params._renderer.render(camera, scene, params.PointLight1, params.PointLight1Intensity);
+  params._renderer.render(camera, scene, params.SandboxMode, params.PointLight1, params.PointLight1Intensity, params.PointLight1Y, params.PointLight1Z);
 }
 
 makeRenderLoop(render)();

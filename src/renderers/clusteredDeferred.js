@@ -81,6 +81,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_viewProjectionMatrix',
                   'u_lightViewProjectionMatrix',
                   'u_shadowMap',
+                  'u_density'
                   /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
@@ -121,7 +122,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_light2Intensity',
                   'u_light2PosX',
                   'u_light2PosZ',
-                  'u_debugVolume'
+                  'u_debugVolume',
+                  'u_density'
                   /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
@@ -155,6 +157,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_shadowMap',
                   'u_lightViewProjectionMatrix',
                   'u_viewProjectionMatrix',
+                  'u_upscaleFactor',
                   'u_debugVolume',
                   'u_debugShadow'
                 ],
@@ -447,7 +450,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         light2Col, light2Intensity, light2PosX, light2PosZ,
         volPosX, volPosY, volPosZ,
         volScaleX, volScaleY, volScaleZ,
-        upscaleFactor, heterogenous, scattering, absorption, interpolation,
+        upscaleFactor, heterogenous, scattering, absorption, density, interpolation,
         dirLightX, dirLightZ) 
   {
     if (canvas.width != this._width || canvas.height != this._height) {
@@ -547,7 +550,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       light2Col, light2Intensity, light2PosX, light2PosZ,
       volPosX, volPosY, volPosZ,
       volScaleX, volScaleY, volScaleZ,
-      upscaleFactor, heterogenous, scattering, absorption);
+      upscaleFactor, heterogenous, scattering, absorption, density);
     
     this.renderFinalPass(finalShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
       light2Col, light2Intensity, light2PosX, light2PosZ,
@@ -619,7 +622,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     light2Col, light2Intensity, light2PosX, light2PosZ,
     volPosX, volPosY, volPosZ,
     volScaleX, volScaleY, volScaleZ,
-    upscaleFactor, heterogenous, scattering, absorption)
+    upscaleFactor, heterogenous, scattering, absorption, density)
   {
     // Update Volume Properties
     var volPos    = vec3.fromValues(volPosX, volPosY, volPosZ); // position of the volume
@@ -659,6 +662,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniform3f(shaderProgram.u_camPos, camera.position.x, camera.position.y, camera.position.z);
     gl.uniform1i(shaderProgram.u_debugVolume, debugVolume);
     gl.uniform1i(shaderProgram.u_debugShadow, debugShadow);
+    gl.uniform1f(shaderProgram.u_density, density);
     
     gl.uniform3f(shaderProgram.u_light1Col, light1Col[0], light1Col[1], light1Col[2]);
     gl.uniform1f(shaderProgram.u_light1Intensity, light1Intensity);

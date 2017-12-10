@@ -41,6 +41,8 @@ export default function(params) {
   uniform mat4 u_invVolTransMat;
   uniform mat4 u_invTranspVolTransMat;
 
+  uniform float u_density;
+
   out vec4 out_Color;
 
   #define ABSORBTION 0.006
@@ -267,7 +269,7 @@ export default function(params) {
       vec3 p1 = p;
       p1.x += u_time;
       float den = texture(u_volBuffer, p1/16.0).x;
-      muS = i>tNear && i<tFar ? den * 0.5 : 0.02;
+      muS = i>tNear && i<tFar ? den * u_density : 0.02;
       muE = max(0.0000001, muA + muS);
 
       // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..

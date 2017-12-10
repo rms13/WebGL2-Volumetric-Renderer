@@ -35,6 +35,7 @@ const params = {
   Heterogenous: true,
   Scattering: 0.05,
   Absorption: 0.05,
+  Density: 0.25,
   UpscaleFactor: 4,
   Interpolation: 0,
   DirLightPosX: 0.5,
@@ -64,6 +65,7 @@ gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED
 
 var dirLightPositions = gui.addFolder('Directional Light Position');
 gui.add(params, 'Heterogenous');
+gui.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
 gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
@@ -88,19 +90,12 @@ light2Folder.addColor(params, 'Light2Color').name('Color').onChange(setRenderer)
 light2Folder.add(params, 'Light2Intensity', 1, 30).name('Intensity').onChange(setRenderer);
 light2Folder.close();
 
-var volumeFolder = sandboxFolder.addFolder('Volume');
-var volumePosFolder = volumeFolder.addFolder('Position');
-var volumeScaleFolder = volumeFolder.addFolder('Scale');
-var volumeCoeffsFolder = volumeFolder.addFolder('Scattering Properties');
-
-volumePosFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
-volumePosFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
-volumePosFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
-volumeScaleFolder.add(params, 'VolumeScaleX', 0.25, 4).onChange(setRenderer);
-volumeScaleFolder.add(params, 'VolumeScaleY', 0.25, 4).onChange(setRenderer);
-volumeScaleFolder.add(params, 'VolumeScaleZ', 0.25, 4).onChange(setRenderer);
-volumeCoeffsFolder.add(params, 'Scattering', 0.25, 4).onChange(setRenderer);
-volumeCoeffsFolder.add(params, 'Absorption', 0.25, 4).onChange(setRenderer);
+var volumeFolder = sandboxFolder.addFolder('Volume Position');
+volumeFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
+volumeFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
+volumeFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
+// volumeCoeffsFolder.add(params, 'Scattering', 0.25, 4).onChange(setRenderer);
+// volumeCoeffsFolder.add(params, 'Absorption', 0.25, 4).onChange(setRenderer);
 volumeFolder.close();
 
 var debugFolder = gui.addFolder('Debug');
@@ -128,7 +123,7 @@ function render() {
     params.VolumePosX, params.VolumePosY, params.VolumePosZ,
     params.VolumeScaleX, params.VolumeScaleY, params.VolumeScaleZ,
     // General
-    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Interpolation,
+    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation,
     params.DirLightPosX, params.DirLightPosZ);
 }
 

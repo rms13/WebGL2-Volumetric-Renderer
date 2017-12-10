@@ -25,7 +25,8 @@ export default function(params) {
   uniform mat4 u_viewProjectionMatrix;
   uniform mat4 u_viewProjectionMatrixLight;
   uniform mat4 u_lightViewProjectionMatrix;
-  
+
+  uniform float u_upscaleFactor;
   uniform int u_debugVolume;
   uniform int u_debugShadow;
 
@@ -260,7 +261,7 @@ export default function(params) {
 
 #define VOLUME
 #ifdef VOLUME
-    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv*0.5);
+    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv * u_upscaleFactor);
     fragColor *= volTexSample00.w;
     fragColor += volTexSample00.xyz;
 #endif
@@ -273,7 +274,7 @@ export default function(params) {
 
     // DEBUG VIEWS
     if(u_debugVolume == 1) {
-      out_Color = vec4(10.0 * volTexSample00.xyz, 1.0);
+      out_Color = vec4(volTexSample00.xyz, 1.0);
     }
 
     if(u_debugShadow == 1) {

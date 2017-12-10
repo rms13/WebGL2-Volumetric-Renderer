@@ -34,6 +34,8 @@ export default function(params) {
   uniform mat4 u_invVolTransMat;
   uniform mat4 u_invTranspVolTransMat;
 
+  uniform float u_density;
+
   out vec4 out_Color;
 
   #define ABSORBTION 0.006
@@ -259,8 +261,8 @@ export default function(params) {
       // add fog value to muS..
       vec3 p1 = p.xyz;
       p1.x += u_time;
-      float den = texture(u_volBuffer, p1/16.0).x;
-      muS = i>tNear && i<tFar ? den * 0.5: 0.02;
+      float den = texture(u_volBuffer, p1 / 16.0).x;
+      muS = i>tNear && i<tFar ? den * u_density: 0.02;
       muE = max(0.0000001, muA + muS);
 
       // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..
@@ -300,7 +302,7 @@ export default function(params) {
         //     lightIdx = int(texel[3]);
         // }
 
-        // // shading
+        // shading
         // Light light = UnpackLight(lightIdx);
         Light light = UnpackLight(j);
         vec3 L = (u_volTransMat * vec4(light.position, 1.0)).xyz - p;

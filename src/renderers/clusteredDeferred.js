@@ -492,7 +492,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // renderFullscreenQuad(this._progShadowMap);
 
-    
 
     for (let i = 0; i < NUM_LIGHTS; ++i) {
       this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 0] = scene.lights[i].position[0];
@@ -513,340 +512,27 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     //  this.first = false;
     //}
 
+    var volShaderProgram, finalShaderProgram;
     if(!sandboxMode) {
-      //--------------------------------------------------  
-      // Volume Pass
-      //--------------------------------------------------              
-      gl.viewport(0, 0, canvas.width/2, canvas.height/2);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
-      // Clear the frame
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      // Use this shader program
-      gl.useProgram(this._progVolPass.glShaderProgram);
-
-      // TODO: Bind any other shader inputs
-      gl.uniformMatrix4fv(this._progVolPass.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progVolPass.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progVolPass.u_viewMatrix, false, this._viewMatrix);
-      gl.uniformMatrix4fv(this._progVolPass.u_invViewMatrix, false, this._invViewMatrix);    
-      gl.uniform1f(this._progVolPass.u_screenW, canvas.width);
-      gl.uniform1f(this._progVolPass.u_screenH, canvas.height);
-      gl.uniform1f(this._progVolPass.u_camN, camera.near);
-      gl.uniform1f(this._progVolPass.u_camF, camera.far);
-      gl.uniform3f(this._progVolPass.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-      
-      gl.uniform1f(this._progVolPass.u_volSize, this.SIZE);
-      // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-      gl.uniformMatrix4fv(this._progVolPass.u_volTransMat, false, this.volTransMat);
-      gl.uniformMatrix4fv(this._progVolPass.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progVolPass.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
-
-      if(this.framenum === undefined) this.framenum = 0.0;
-      this.framenum+=0.05;
-      gl.uniform1f(this._progVolPass.u_time, this.framenum);
-
-      // Bind g-buffers
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-      gl.uniform1i(this._progVolPass[`u_gbuffers[0]`], 0);
-
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-      gl.uniform1i(this._progVolPass[`u_gbuffers[1]`], 1);
-
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-      gl.uniform1i(this._progVolPass[`u_gbuffers[2]`], 2);
-
-      // Bind the light and cluster textures...
-      // Set the light texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE3);
-      gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
-      gl.uniform1i(this._progVolPass.u_lightbuffer, 3);
-
-      // Set the cluster texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE4);
-      gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
-      gl.uniform1i(this._progVolPass.u_clusterbuffer, 4);
-
-      gl.activeTexture(gl.TEXTURE5);
-      gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
-      gl.uniform1i(this._progVolPass.u_volBuffer, 5);
-
-      gl.activeTexture(gl.TEXTURE6);
-      gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-      gl.uniform1i(this._progVolPass[`u_shadowMap`], 6);
-
-      renderFullscreenQuad(this._progVolPass);
-      //scene.draw(this._progVolPass);
-
-      //--------------------------------------------------  
-      // Final Shading Pass
-      //--------------------------------------------------      
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      // Bind the default null framebuffer which is the screen
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      // Clear the frame
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-      // Use this shader program
-      gl.useProgram(this._progShade.glShaderProgram);
-
-      // TODO: Bind any other shader inputs
-      gl.uniformMatrix4fv(this._progShade.u_viewMatrix, false, this._viewMatrix);
-      gl.uniformMatrix4fv(this._progShade.u_invViewMatrix, false, this._invViewMatrix);
-      gl.uniform1f(this._progShade.u_screenW, canvas.width);
-      gl.uniform1f(this._progShade.u_screenH, canvas.height);
-      gl.uniform1f(this._progShade.u_camN, camera.near);
-      gl.uniform1f(this._progShade.u_camF, camera.far);
-      gl.uniform3f(this._progShade.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-      gl.uniformMatrix4fv(this._progShade.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progShade.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
-      
-      gl.uniform1f(this._progShade.u_volSize, this.SIZE);
-      // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-      gl.uniformMatrix4fv(this._progShade.u_volTransMat, false, this.volTransMat);
-      gl.uniformMatrix4fv(this._progShade.u_invVolTransMat, false, this.invVolTransMat);
-      gl.uniformMatrix4fv(this._progShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
-
-      // if(this.framenum === undefined) this.framenum = 0.0;
-      // this.framenum+=0.05;
-      gl.uniform1f(this._progShade.u_time, this.framenum);
-      // if(this.t0 === undefined) {
-      //   this.t0 = performance.now();
-      //   gl.uniform1f(this._progShade.u_time, 0);
-      // }
-      // else {
-      //   t1 = performance.now();
-      //   gl.uniform1f(this._progShade.u_time, t1 - t0);
-      // }
-      // this.t0 = this.t1;
-
-      // Bind g-buffers
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-      gl.uniform1i(this._progShade[`u_gbuffers[0]`], 0);
-
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-      gl.uniform1i(this._progShade[`u_gbuffers[1]`], 1);
-
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-      gl.uniform1i(this._progShade[`u_gbuffers[2]`], 2);
-
-      // bind volume pass texture
-      gl.activeTexture(gl.TEXTURE3);
-      gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-      gl.uniform1i(this._progShade[`u_volPassBuffer`], 3);
-
-      gl.activeTexture(gl.TEXTURE4);
-      gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-      gl.uniform1i(this._progShade[`u_shadowMap`], 4);
-
-      // Bind the light and cluster textures...
-      // Set the light texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE5);
-      gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
-      gl.uniform1i(this._progShade.u_lightbuffer, 5);
-
-      // Set the cluster texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE6);
-      gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
-      gl.uniform1i(this._progShade.u_clusterbuffer, 6);
-
-      // bind 3d volume texture
-      gl.activeTexture(gl.TEXTURE7);
-      gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
-      gl.uniform1i(this._progShade.u_volBuffer, 7);
-
-      renderFullscreenQuad(this._progShade);
+      volShaderProgram = this._progVolPass;
+      finalShaderProgram = this._progShade;
     }
     else {
-      // if(heterogenous) {
-      //   console.log("HETEROGENOUS");
-      // }
-      // else {
-      //   console.log("HOMOGENOUS");
-      // }
-
-      // Update Volume Properties
-      var volPos    = vec3.fromValues(volPosX, volPosY, volPosZ); // position of the volume
-      var volScale  = vec3.fromValues(volScaleX, volScaleY, volScaleZ); // scale of the volume
-      var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
-      quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
-
-      mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
-      mat4.invert(this.invVolTransMat, this.volTransMat);    
-      mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
-
-      if(this._upscaleFactor != upscaleFactor || this._heterogenous != heterogenous) {
-        this.updateVolume(upscaleFactor, heterogenous, volPos, volScale, volOrient);
-        this._upscaleFactor = upscaleFactor;  
-        this._heterogenous = heterogenous;
-      }
-
-        
-
-
-      //--------------------------------------------------  
-      // Volume Pass
-      //--------------------------------------------------              
-      gl.viewport(0, 0, canvas.width/2, canvas.height/2);
-      gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
-      // Clear the frame
-      gl.clear(gl.COLOR_BUFFER_BIT);
-      // Use this shader program
-      gl.useProgram(this._progVolSandboxPass.glShaderProgram);
-
-      // TODO: Bind any other shader inputs
-      gl.uniformMatrix4fv(this._progVolSandboxPass.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progVolSandboxPass.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progVolSandboxPass.u_viewMatrix, false, this._viewMatrix);
-      gl.uniformMatrix4fv(this._progVolSandboxPass.u_invViewMatrix, false, this._invViewMatrix);    
-      gl.uniform1f(this._progVolSandboxPass.u_screenW, canvas.width);
-      gl.uniform1f(this._progVolSandboxPass.u_screenH, canvas.height);
-      gl.uniform1f(this._progVolSandboxPass.u_camN, camera.near);
-      gl.uniform1f(this._progVolSandboxPass.u_camF, camera.far);
-      gl.uniform3f(this._progVolSandboxPass.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-      
-      gl.uniform3f(this._progVolSandboxPass.u_light1Col, light1Col[0], light1Col[1], light1Col[2]);
-      gl.uniform1f(this._progVolSandboxPass.u_light1Intensity, light1Intensity);
-      gl.uniform1f(this._progVolSandboxPass.u_light1PosY, light1PosY);
-      gl.uniform1f(this._progVolSandboxPass.u_light1PosZ, light1PosZ);
-
-      gl.uniform3f(this._progVolSandboxPass.u_light2Col, light2Col[0], light2Col[1], light2Col[2]);
-      gl.uniform1f(this._progVolSandboxPass.u_light2Intensity, light2Intensity);
-      gl.uniform1f(this._progVolSandboxPass.u_light2PosX, light2PosX);
-      gl.uniform1f(this._progVolSandboxPass.u_light2PosZ, light2PosZ);
-      
-      gl.uniform1f(this._progVolSandboxPass.u_volSize, this.SIZE);
-      // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-      gl.uniformMatrix4fv(this._progVolSandboxPass.u_volTransMat, false, this.volTransMat);
-      gl.uniformMatrix4fv(this._progVolSandboxPass.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progVolSandboxPass.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
-
-      if(this.framenum === undefined) this.framenum = 0.0;
-      this.framenum+=0.05;
-      gl.uniform1f(this._progVolSandboxPass.u_time, this.framenum);
-
-      // Bind g-buffers
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-      gl.uniform1i(this._progVolSandboxPass[`u_gbuffers[0]`], 0);
-
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-      gl.uniform1i(this._progVolSandboxPass[`u_gbuffers[1]`], 1);
-
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-      gl.uniform1i(this._progVolSandboxPass[`u_gbuffers[2]`], 2);
-
-      // Bind the light and cluster textures...
-      // Set the light texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE3);
-      gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
-      gl.uniform1i(this._progVolSandboxPass.u_lightbuffer, 3);
-
-      // Set the cluster texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE4);
-      gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
-      gl.uniform1i(this._progVolSandboxPass.u_clusterbuffer, 4);
-
-      gl.activeTexture(gl.TEXTURE5);
-      gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
-      gl.uniform1i(this._progVolSandboxPass.u_volBuffer, 5);
-
-      gl.activeTexture(gl.TEXTURE6);
-      gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-      gl.uniform1i(this._progVolSandboxPass[`u_shadowMap`], 6);
-
-      renderFullscreenQuad(this._progVolSandboxPass);
-      //scene.draw(this._progVolPass);
-
-      //--------------------------------------------------  
-      // Final Shading Pass
-      //--------------------------------------------------      
-      gl.viewport(0, 0, canvas.width, canvas.height);
-      // Bind the default null framebuffer which is the screen
-      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-      // Clear the frame
-      gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-      // Use this shader program
-      gl.useProgram(this._progSandboxShade.glShaderProgram);
-
-      // TODO: Bind any other shader inputs
-      gl.uniformMatrix4fv(this._progSandboxShade.u_viewMatrix, false, this._viewMatrix);
-      gl.uniformMatrix4fv(this._progSandboxShade.u_invViewMatrix, false, this._invViewMatrix);
-      gl.uniform1f(this._progSandboxShade.u_screenW, canvas.width);
-      gl.uniform1f(this._progSandboxShade.u_screenH, canvas.height);
-      gl.uniform1f(this._progSandboxShade.u_camN, camera.near);
-      gl.uniform1f(this._progSandboxShade.u_camF, camera.far);
-      gl.uniform3f(this._progSandboxShade.u_camPos, camera.position.x, camera.position.y, camera.position.z);
-      gl.uniformMatrix4fv(this._progSandboxShade.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
-      gl.uniformMatrix4fv(this._progSandboxShade.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
-      
-      gl.uniform1f(this._progSandboxShade.u_volSize, this.SIZE);
-      // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
-      gl.uniformMatrix4fv(this._progSandboxShade.u_volTransMat, false, this.volTransMat);
-      gl.uniformMatrix4fv(this._progSandboxShade.u_invVolTransMat, false, this.invVolTransMat);
-      gl.uniformMatrix4fv(this._progSandboxShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
-
-      // if(this.framenum === undefined) this.framenum = 0.0;
-      // this.framenum+=0.05;
-      gl.uniform1f(this._progSandboxShade.u_time, this.framenum);
-      // if(this.t0 === undefined) {
-      //   this.t0 = performance.now();
-      //   gl.uniform1f(this._progShade.u_time, 0);
-      // }
-      // else {
-      //   t1 = performance.now();
-      //   gl.uniform1f(this._progShade.u_time, t1 - t0);
-      // }
-      // this.t0 = this.t1;
-
-      // Bind g-buffers
-      gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
-      gl.uniform1i(this._progSandboxShade[`u_gbuffers[0]`], 0);
-
-      gl.activeTexture(gl.TEXTURE1);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
-      gl.uniform1i(this._progSandboxShade[`u_gbuffers[1]`], 1);
-
-      gl.activeTexture(gl.TEXTURE2);
-      gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
-      gl.uniform1i(this._progSandboxShade[`u_gbuffers[2]`], 2);
-
-      // bind volume pass texture
-      gl.activeTexture(gl.TEXTURE3);
-      gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-      gl.uniform1i(this._progSandboxShade[`u_volPassBuffer`], 3);
-
-      gl.activeTexture(gl.TEXTURE4);
-      gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-      gl.uniform1i(this._progSandboxShade[`u_shadowMap`], 4);
-
-      // Bind the light and cluster textures...
-      // Set the light texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE5);
-      gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
-      gl.uniform1i(this._progSandboxShade.u_lightbuffer, 5);
-
-      // Set the cluster texture as a uniform input to the shader
-      gl.activeTexture(gl.TEXTURE6);
-      gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
-      gl.uniform1i(this._progSandboxShade.u_clusterbuffer, 6);
-
-      // bind 3d volume texture
-      gl.activeTexture(gl.TEXTURE7);
-      gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
-      gl.uniform1i(this._progSandboxShade.u_volBuffer, 7);
-
-      renderFullscreenQuad(this._progSandboxShade); 
+      volShaderProgram = this._progVolSandboxPass;
+      finalShaderProgram = this._progSandboxShade;
     }
+
+    this.renderVolumePass(volShaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+      light2Col, light2Intensity, light2PosX, light2PosZ,
+      volPosX, volPosY, volPosZ,
+      volScaleX, volScaleY, volScaleZ,
+      upscaleFactor, heterogenous, scattering, absorption);
+    
+    this.renderFinalPass(finalShaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+      light2Col, light2Intensity, light2PosX, light2PosZ,
+      volPosX, volPosY, volPosZ,
+      volScaleX, volScaleY, volScaleZ,
+      upscaleFactor, heterogenous, scattering, absorption);
   }
 
   updateVolume(upscaleFactor, heterogenous, pos, scale, orient)
@@ -906,5 +592,190 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.bindTexture(gl.TEXTURE_3D, null);
     // gl.uniform1i(this._shaderProgram.u_volBuffer, 0);
     // END: CREATE 3D-TEXTURE
+  }
+
+  renderVolumePass(shaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+    light2Col, light2Intensity, light2PosX, light2PosZ,
+    volPosX, volPosY, volPosZ,
+    volScaleX, volScaleY, volScaleZ,
+    upscaleFactor, heterogenous, scattering, absorption)
+  {
+    // Update Volume Properties
+    var volPos    = vec3.fromValues(volPosX, volPosY, volPosZ); // position of the volume
+    var volScale  = vec3.fromValues(volScaleX, volScaleY, volScaleZ); // scale of the volume
+    var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
+    quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
+
+    mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
+    mat4.invert(this.invVolTransMat, this.volTransMat);    
+    mat4.transpose(this.invTranspVolTransMat, this.invVolTransMat);
+
+    if(this._upscaleFactor != upscaleFactor || this._heterogenous != heterogenous) {
+      this.updateVolume(upscaleFactor, heterogenous, volPos, volScale, volOrient);
+      this._upscaleFactor = upscaleFactor;  
+      this._heterogenous = heterogenous;
+    }
+
+    //--------------------------------------------------  
+    // Volume Pass
+    //--------------------------------------------------              
+    gl.viewport(0, 0, canvas.width/2, canvas.height/2);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
+    // Clear the frame
+    gl.clear(gl.COLOR_BUFFER_BIT);
+    // Use this shader program
+    gl.useProgram(shaderProgram.glShaderProgram);
+
+    // TODO: Bind any other shader inputs
+    gl.uniformMatrix4fv(shaderProgram.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    gl.uniformMatrix4fv(shaderProgram.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
+    gl.uniformMatrix4fv(shaderProgram.u_viewMatrix, false, this._viewMatrix);
+    gl.uniformMatrix4fv(shaderProgram.u_invViewMatrix, false, this._invViewMatrix);    
+    gl.uniform1f(shaderProgram.u_screenW, canvas.width);
+    gl.uniform1f(shaderProgram.u_screenH, canvas.height);
+    gl.uniform1f(shaderProgram.u_camN, camera.near);
+    gl.uniform1f(shaderProgram.u_camF, camera.far);
+    gl.uniform3f(shaderProgram.u_camPos, camera.position.x, camera.position.y, camera.position.z);
+    
+    gl.uniform3f(shaderProgram.u_light1Col, light1Col[0], light1Col[1], light1Col[2]);
+    gl.uniform1f(shaderProgram.u_light1Intensity, light1Intensity);
+    gl.uniform1f(shaderProgram.u_light1PosY, light1PosY);
+    gl.uniform1f(shaderProgram.u_light1PosZ, light1PosZ);
+
+    gl.uniform3f(shaderProgram.u_light2Col, light2Col[0], light2Col[1], light2Col[2]);
+    gl.uniform1f(shaderProgram.u_light2Intensity, light2Intensity);
+    gl.uniform1f(shaderProgram.u_light2PosX, light2PosX);
+    gl.uniform1f(shaderProgram.u_light2PosZ, light2PosZ);
+    
+    gl.uniform1f(shaderProgram.u_volSize, this.SIZE);
+    // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
+    gl.uniformMatrix4fv(shaderProgram.u_volTransMat, false, this.volTransMat);
+    gl.uniformMatrix4fv(shaderProgram.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    gl.uniformMatrix4fv(shaderProgram.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
+
+    if(this.framenum === undefined) this.framenum = 0.0;
+    this.framenum+=0.05;
+    gl.uniform1f(shaderProgram.u_time, this.framenum);
+
+    // Bind g-buffers
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
+    gl.uniform1i(shaderProgram[`u_gbuffers[0]`], 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
+    gl.uniform1i(shaderProgram[`u_gbuffers[1]`], 1);
+
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
+    gl.uniform1i(shaderProgram[`u_gbuffers[2]`], 2);
+
+    // Bind the light and cluster textures...
+    // Set the light texture as a uniform input to the shader
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
+    gl.uniform1i(shaderProgram.u_lightbuffer, 3);
+
+    // Set the cluster texture as a uniform input to the shader
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
+    gl.uniform1i(shaderProgram.u_clusterbuffer, 4);
+
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
+    gl.uniform1i(shaderProgram.u_volBuffer, 5);
+
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
+    gl.uniform1i(shaderProgram[`u_shadowMap`], 6);
+
+    renderFullscreenQuad(shaderProgram);
+    //scene.draw(this._progVolPass);
+  }
+
+  renderFinalPass(shaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+    light2Col, light2Intensity, light2PosX, light2PosZ,
+    volPosX, volPosY, volPosZ,
+    volScaleX, volScaleY, volScaleZ,
+    upscaleFactor, heterogenous, scattering, absorption)
+  {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    // Bind the default null framebuffer which is the screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // Clear the frame
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Use this shader program
+    gl.useProgram(this._progSandboxShade.glShaderProgram);
+
+    // TODO: Bind any other shader inputs
+    gl.uniformMatrix4fv(this._progSandboxShade.u_viewMatrix, false, this._viewMatrix);
+    gl.uniformMatrix4fv(this._progSandboxShade.u_invViewMatrix, false, this._invViewMatrix);
+    gl.uniform1f(this._progSandboxShade.u_screenW, canvas.width);
+    gl.uniform1f(this._progSandboxShade.u_screenH, canvas.height);
+    gl.uniform1f(this._progSandboxShade.u_camN, camera.near);
+    gl.uniform1f(this._progSandboxShade.u_camF, camera.far);
+    gl.uniform3f(this._progSandboxShade.u_camPos, camera.position.x, camera.position.y, camera.position.z);
+    gl.uniformMatrix4fv(this._progSandboxShade.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
+    gl.uniformMatrix4fv(this._progSandboxShade.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
+    
+    gl.uniform1f(this._progSandboxShade.u_volSize, this.SIZE);
+    // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
+    gl.uniformMatrix4fv(this._progSandboxShade.u_volTransMat, false, this.volTransMat);
+    gl.uniformMatrix4fv(this._progSandboxShade.u_invVolTransMat, false, this.invVolTransMat);
+    gl.uniformMatrix4fv(this._progSandboxShade.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
+
+    // if(this.framenum === undefined) this.framenum = 0.0;
+    // this.framenum+=0.05;
+    gl.uniform1f(this._progSandboxShade.u_time, this.framenum);
+    // if(this.t0 === undefined) {
+    //   this.t0 = performance.now();
+    //   gl.uniform1f(this._progShade.u_time, 0);
+    // }
+    // else {
+    //   t1 = performance.now();
+    //   gl.uniform1f(this._progShade.u_time, t1 - t0);
+    // }
+    // this.t0 = this.t1;
+
+    // Bind g-buffers
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
+    gl.uniform1i(this._progSandboxShade[`u_gbuffers[0]`], 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[1]);
+    gl.uniform1i(this._progSandboxShade[`u_gbuffers[1]`], 1);
+
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[2]);
+    gl.uniform1i(this._progSandboxShade[`u_gbuffers[2]`], 2);
+
+    // bind volume pass texture
+    gl.activeTexture(gl.TEXTURE3);
+    gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
+    gl.uniform1i(this._progSandboxShade[`u_volPassBuffer`], 3);
+
+    gl.activeTexture(gl.TEXTURE4);
+    gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
+    gl.uniform1i(this._progSandboxShade[`u_shadowMap`], 4);
+
+    // Bind the light and cluster textures...
+    // Set the light texture as a uniform input to the shader
+    gl.activeTexture(gl.TEXTURE5);
+    gl.bindTexture(gl.TEXTURE_2D, this._lightTexture.glTexture);
+    gl.uniform1i(this._progSandboxShade.u_lightbuffer, 5);
+
+    // Set the cluster texture as a uniform input to the shader
+    gl.activeTexture(gl.TEXTURE6);
+    gl.bindTexture(gl.TEXTURE_2D, this._clusterTexture.glTexture);
+    gl.uniform1i(this._progSandboxShade.u_clusterbuffer, 6);
+
+    // bind 3d volume texture
+    gl.activeTexture(gl.TEXTURE7);
+    gl.bindTexture(gl.TEXTURE_3D, this._volBuffer);
+    gl.uniform1i(this._progSandboxShade.u_volBuffer, 7);
+
+    renderFullscreenQuad(this._progSandboxShade); 
   }
 };

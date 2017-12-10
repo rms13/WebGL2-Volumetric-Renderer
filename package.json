@@ -7,6 +7,7 @@
   "dependencies": {
     "dat-gui": "^0.5.0",
     "gl-matrix": "^2.4.0",
+    "gpu.js": "^1.0.0-rc.8",
     "spectorjs": "^0.9.0",
     "stats-js": "^1.0.0-alpha1",
     "three": "^0.87.1",

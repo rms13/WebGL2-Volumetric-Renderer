@@ -1,8 +1,27 @@
 import { mat4, vec4, vec3 } from 'gl-matrix';
 import { NUM_LIGHTS } from '../scene';
 import TextureBuffer from './textureBuffer';
+import GPU from 'gpu.js';
 
 export const MAX_LIGHTS_PER_CLUSTER = 10;
+
+const gpu = new GPU();
+
+const myFunc = gpu.createKernel(function(xSlices, ySlices, zSlices) {
+  for (let z = 0; z < zSlices; ++z) {
+    for (let y = 0; y < ySlices; ++y) {
+      for (let x = 0; x < xSlices; ++x) {
+        let i = x + y * xSlices + z * xSlices * ySlices;
+        // Reset the light count to 0 for every cluster
+        // clusterTexture.buffer[4 * i + 4 * 0 * xSlices * ySlices * zSlices] = 0;
+        // arr[4 * i + 4 * 0 * xSlices * ySlices * zSlices] = 0;
+
+        return i;
+      }
+    }
+  }
+
+}).setOutput([100]);
 
 export default class ClusteredRenderer {
   constructor(xSlices, ySlices, zSlices) {
@@ -11,6 +30,9 @@ export default class ClusteredRenderer {
     this._xSlices = xSlices;
     this._ySlices = ySlices;
     this._zSlices = zSlices;
+
+    // var arr = myFunc(this._xSlices, this._ySlices, this._zSlices);
+    // console.log(arr);
   }
 
   createPlane(v0, v1, v2) {
@@ -172,7 +194,6 @@ export default class ClusteredRenderer {
   }
 
   updateClusters(camera, viewMatrix, scene) {
-
     for (let z = 0; z < this._zSlices; ++z) {
       for (let y = 0; y < this._ySlices; ++y) {
         for (let x = 0; x < this._xSlices; ++x) {

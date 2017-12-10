@@ -89,25 +89,6 @@ export default function(params) {
     }
   }
 
-  float transmittance(vec3 p1, vec3 p2)
-  {
-    
-    float exponent = -EXTINCTION * texture(u_volBuffer, p2.xxx/u_volSize/4.0).x/255.0/*DENSITY*/ * distance(p1, p2);
-
-    return exp(exponent);
-  }
-
-  float phaseFunction(vec3 wo, vec3 wi, float g)
-  {
-    float dot = dot(wo, wi);
-    float cosTheta = cos(dot);
-
-    float num = 1.0f - (g * g);
-    float denom = 4.0f * PI * pow(1.0 + g * g - 2.0 * g * cosTheta, 1.5);
-
-    return num / denom;
-  }
-
   float phaseFunction()
   {
       return 1.0/(4.0*PI);
@@ -211,7 +192,7 @@ export default function(params) {
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
     vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
-    vec3 shadow     = shadowMap(v_position, normal, albedo);
+    //vec3 shadow     = shadowMap(v_position, normal, albedo);
     
     //albedo = vec3(0.98,0.98,0.98);
 
@@ -222,22 +203,21 @@ export default function(params) {
     // vec3 sunCol = vec3(0.5, 0.5, 0.4);
     // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
 
-    vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
+    //vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
 
-    //point light
-    vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
-    // vec3 lightPos = vec3(0.0, 3.0, 0.0);
-    // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
-    // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
-    vec3 lightCol = 1000.0 * vec3(0.0, 0.0, 1.0);
+    // //point light
+    // vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
+    // // vec3 lightPos = vec3(0.0, 3.0, 0.0);
+    // // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
+    // // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
+    // vec3 lightCol = 1000.0 * vec3(0.0, 0.0, 1.0);
 
-    vec3 lightPos2 = vec3(2.0 * 1.0 * sin(u_time * 0.5), 0.0, 0.0);
-    // vec3 lightPos = vec3(0.0, 3.0, 0.0);
-    // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
-    // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
-    vec3 lightCol2 = u_lightIntensity * u_lightCol;
+    // vec3 lightPos2 = vec3(2.0 * 1.0 * sin(u_time * 0.5), 0.0, 0.0);
+    // // vec3 lightPos = vec3(0.0, 3.0, 0.0);
+    // // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
+    // // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
+    // vec3 lightCol2 = 1000.0 * vec3(1.0, 0.0, 0.0);
     
-
     //-- Naive Volumetric Ray March
     // Make a ray from the camera to the point in world space.
     vec3 rayOrigin    = u_camPos;
@@ -260,10 +240,6 @@ export default function(params) {
 
     float stepSize = len / float(NUM_STEPS);
 
-    float pmAlbedo = SCATTERING / EXTINCTION;
-
-    vec3 fog = vec3(0.0);
-    
     float muS = 0.009; // scattering
     float muA = 0.006; // attenuation
     float muE = muS + muA; // extinction
@@ -275,6 +251,8 @@ export default function(params) {
     for(float i = 1.0; i <= len; i += stepSize) {
       // Get ray marched point
       vec3 p = rayOriginVol + (i * rayDirectionVol);
+      vec3 pWorld = (u_invVolTransMat * vec4(p, 1.0)).xyz;//rayOrigin + i * rayDirection;
+      vec2 pUv = pWorld.xy * 0.5 + 0.5;
 
       // add fog value to muS..
       vec3 p1 = p;
@@ -283,56 +261,59 @@ export default function(params) {
       muS = i>tNear && i<tFar ? den * 0.5 : 0.02;
       muE = max(0.0000001, muA + muS);
 
-      // evaluate lighting..
-      vec3 L = (u_volTransMat * vec4(lightPos, 1.0)).xyz - p;
-      // float distL = length(L);
-      // vec3 lightDir = L / (distL);
-      vec3 Li = lightCol / dot(L, L);
+      // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..
 
-      // evaluate lighting..
-      vec3 L2 = (u_volTransMat * vec4(lightPos2, 1.0)).xyz - p;
-      // float distL = length(L);
-      // vec3 lightDir = L / (distL);
-      vec3 Li2 = lightCol2 / dot(L2, L2);
+      ivec3 clusterPos = ivec3(
+        int(pUv.x / u_screenW * float(${params.xSlices})),
+        int(pUv.y / u_screenH * float(${params.ySlices})),
+        int((-(u_viewMatrix * vec4(pWorld,1.0)).z - u_camN) / (u_camF - u_camN) * float(${params.zSlices}))
+      );
 
-      // improved scattering
-      // vec3 scat = muS * Li * phaseFunction() * shadow;
-      // vec3 scat = muS * Li * phaseFunction()  shadow * volumetricShadow(p, lightPosition.xyz, tNear, tFar);
-// #define SHADOW
-#ifdef SHADOW
-      vec3 scat = muS * Li * phaseFunction() *  volumetricShadow(p, lightPos, tNear, tFar);
-      scat += muS * Li2 * phaseFunction() * volumetricShadow(p, lightPos2, tNear, tFar);
-#else
-      vec3 scat = muS * Li * phaseFunction();
-      scat += muS * Li2 * phaseFunction();
-#endif
+      int clusterIdx = clusterPos.x + clusterPos.y * ${params.xSlices} + clusterPos.z * ${params.xSlices} * ${params.ySlices};
+      int clusterWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
+      int clusterHeight = int(float(${params.maxLights}+1) / 4.0) + 1;
+      float clusterU = float(clusterIdx + 1) / float(clusterWidth + 1); // like u in UnpackLight()..
+
+      int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
+
+      vec3 scat = vec3(0.0);// = muS * Li * phaseFunction();
+
+      for (int j = 0; j < ${params.numLights}; j++) {
+        if(j >= numLights) {
+          break;
+        }
+
+        int clusterPixel = int(float(j+1) / 4.0);
+        float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
+        vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
+        int lightIdx;
+        int clusterPixelComponent = (j+1) - (clusterPixel * 4);
+        if (clusterPixelComponent == 0) {
+            lightIdx = int(texel[0]);
+        } else if (clusterPixelComponent == 1) {
+            lightIdx = int(texel[1]);
+        } else if (clusterPixelComponent == 2) {
+            lightIdx = int(texel[2]);
+        } else if (clusterPixelComponent == 3) {
+            lightIdx = int(texel[3]);
+        }
+
+        // shading
+        Light light = UnpackLight(lightIdx);
+
+        vec3 L = (u_volTransMat * vec4(light.position, 1.0)).xyz - p;
+        vec3 Li = light.color / dot(L, L);
+        scat += muS * Li * phaseFunction();
+      }
+      // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
 
       float expE = exp(-muE * stepSize);
       vec3 integration = (scat - scat * expE) / muE;
       scatteredLight += transmittance * integration;
       transmittance *= expE;
-
-      // normal scattering
-      // transmittance *= exp(-muE * stepSize);
-      // scatteredLight += muS * Li * phaseFunction() * transmittance;// * stepSize;
     }
 
-    // vec3 L = (u_volTransMat * vec4((lightPos - v_position), 1.0)).xyz;
-    // float distL = length(L);
-    // vec3 lightDir = L / (distL);
-    // vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
-    // vec3 Li = max(0.0, dot(normalVol, lightDir)) * lightCol / (distL * distL);
-
-    // fragColor = (albedo/3.14) * Li;
-    // fragColor *= transmittance;
-    // fragColor += scatteredLight;
-
-    //// gamma correct
-    // fragColor = pow(fragColor, vec3(1.0/2.2));
-
-    // fragColor += shadow * volumetricShadow(lightPosition.xyz, v_position, tNear, tFar);
-
-    out_Color = vec4(scatteredLight, 1.0);
+    out_Color = vec4(scatteredLight, transmittance);
   }
   `;
 }

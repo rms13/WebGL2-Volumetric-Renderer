@@ -125,6 +125,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 200);
     mat4.lookAt(this._lightViewMatrix, vec3.fromValues(.5,4,.5), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
     mat4.multiply(this._lightViewProjectionMatrix, this._lightProjectionMatrix, this._lightViewMatrix);
+    // mat4.perspective(this._lightViewProjectionMatrix, 70.0, 1, 1.0, 200.0);
+    // mat4.lookAt(this._lightViewProjectionMatrix, dirLightPos, vec3.fromValues(0.0,0.0,0.0), vec3.fromValues(0.0,1.0,0.0));
+
+    this.first = true;
   }
 
   setupDrawBuffers(width, height) {
@@ -342,7 +346,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this.w += width;
     this.h = (height % 8);
     this.h += height;
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.w/2, this.h/2, 0, gl.RGBA, gl.FLOAT, null);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
   }
@@ -416,12 +420,15 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightTexture.update();
 
     // Update the clusters for the frame
-    this.updateClustersOptimized(camera, this._viewMatrix, scene);
+    //if(this.first === true) {
+      this.updateClustersOptimized(camera, this._viewMatrix, scene);
+    //  this.first = false;
+    //}
 
     //--------------------------------------------------  
     // Volume Pass
     //--------------------------------------------------              
-    gl.viewport(0, 0, canvas.width/4, canvas.height/4);
+    gl.viewport(0, 0, canvas.width/2, canvas.height/2);
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
     // Clear the frame
     gl.clear(gl.COLOR_BUFFER_BIT);

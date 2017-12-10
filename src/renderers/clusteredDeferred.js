@@ -18,6 +18,9 @@ import ClusteredRenderer from './clustered';
 
 export const NUM_GBUFFERS = 3;
 
+const LINEAR = 0;
+const NEAREST = 1;
+
 export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   constructor(xSlices, ySlices, zSlices) {
     super(xSlices, ySlices, zSlices);
@@ -30,6 +33,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Create a 3D texture to store volume
     this._upscaleFactor = 32;
     this._heterogenous = true;
+    this._interpolationMethod = NEAREST;
     this.createVolumeBuffer(vec3.fromValues(0,-4,0), this._upscaleFactor, this._heterogenous);
     // this.createVolumeBuffer(vec3.fromValues(0,15,0));
 
@@ -181,7 +185,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_volPassBuffer',
                   'u_shadowMap',
                   'u_lightViewProjectionMatrix',
-                  'u_viewProjectionMatrix'
+                  'u_viewProjectionMatrix',
+                  'u_upscaleFactor'
                 ],
       attribs:  [ 'a_position'  ]
     });
@@ -438,7 +443,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         light2Col, light2Intensity, light2PosX, light2PosZ,
         volPosX, volPosY, volPosZ,
         volScaleX, volScaleY, volScaleZ,
-        upscaleFactor, heterogenous, scattering, absorption) 
+        upscaleFactor, heterogenous, scattering, absorption, interpolation) 
   {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);
@@ -522,6 +527,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       finalShaderProgram = this._progSandboxShade;
     }
 
+    if(this._interpolationMethod != interpolation) {
+      this.updateVolume2D(interpolation, canvas.width, canvas.height);
+      this._interpolationMethod = interpolation;
+    }
+
     this.renderVolumePass(volShaderProgram, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
       light2Col, light2Intensity, light2PosX, light2PosZ,
       volPosX, volPosY, volPosZ,
@@ -540,7 +550,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.deleteTexture(this._volBuffer);
     // CREATE AND BING THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
-    this.SIZE = upscaleFactor;
+    this.SIZE = 64;
     var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
     this.data = new Uint8Array(this.SIZE * this.SIZE * this.SIZE);
     for (var k = 0; k < this.SIZE; ++k) {
@@ -619,7 +629,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     //--------------------------------------------------  
     // Volume Pass
     //--------------------------------------------------              
-    gl.viewport(0, 0, canvas.width/2, canvas.height/2);
+    gl.viewport(0, 0, canvas.width/Math.sqrt(upscaleFactor), canvas.height/Math.sqrt(upscaleFactor));
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
     // Clear the frame
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -631,8 +641,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniformMatrix4fv(shaderProgram.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
     gl.uniformMatrix4fv(shaderProgram.u_viewMatrix, false, this._viewMatrix);
     gl.uniformMatrix4fv(shaderProgram.u_invViewMatrix, false, this._invViewMatrix);    
-    gl.uniform1f(shaderProgram.u_screenW, canvas.width);
-    gl.uniform1f(shaderProgram.u_screenH, canvas.height);
+    gl.uniform1f(shaderProgram.u_screenW, canvas.width / Math.sqrt(upscaleFactor));
+    gl.uniform1f(shaderProgram.u_screenH, canvas.height / Math.sqrt(upscaleFactor));
     gl.uniform1f(shaderProgram.u_camN, camera.near);
     gl.uniform1f(shaderProgram.u_camF, camera.far);
     gl.uniform3f(shaderProgram.u_camPos, camera.position.x, camera.position.y, camera.position.z);
@@ -720,6 +730,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniformMatrix4fv(this._progSandboxShade.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
     
     gl.uniform1f(this._progSandboxShade.u_volSize, this.SIZE);
+    gl.uniform1f(this._progSandboxShade.u_upscaleFactor, 1 / Math.sqrt(upscaleFactor));
     // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
     gl.uniformMatrix4fv(this._progSandboxShade.u_volTransMat, false, this.volTransMat);
     gl.uniformMatrix4fv(this._progSandboxShade.u_invVolTransMat, false, this.invVolTransMat);
@@ -777,5 +788,51 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniform1i(this._progSandboxShade.u_volBuffer, 7);
 
     renderFullscreenQuad(this._progSandboxShade); 
+  }
+
+  updateVolume2D(interpolation, width, height)
+  {
+    // Volume Pass..
+    this._volPassTex = gl.createTexture();
+    // var img = new Uint8Array(width * height);
+    // for (var k = 0; k < width; ++k) {
+    //   for (var j = 0; j < height; ++j) {
+    //     this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = 0;//Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
+    //   }
+    // }
+    //this._volPassTex.generateMipmaps = false;
+    // this._volPassTex.minFilter = THREE.LinearFilter;
+    // this._volPassTex.magFilter = THREE.LinearFilter;
+    //gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    var interpolationMethod;
+    if(interpolation == LINEAR) {
+      interpolationMethod = gl.LINEAR;
+    }
+    else if(interpolation == NEAREST) {
+      interpolationMethod = gl.NEAREST;
+    }
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, interpolationMethod);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, interpolationMethod);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    this.w = (width % 8);
+    this.w += width;
+    this.h = (height % 8);
+    this.h += height;
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+    
+    this._fboVolPass = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._volPassTex, 0);
+    
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
+      throw "Framebuffer incomplete";
+    }
+
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   }
 };

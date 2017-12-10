@@ -26,6 +26,7 @@ export default function(params) {
   uniform mat4 u_viewProjectionMatrixLight;
   uniform mat4 u_lightViewProjectionMatrix;
   
+  uniform float u_upscaleFactor;
 
   uniform float u_screenW;
   uniform float u_screenH;
@@ -48,30 +49,8 @@ export default function(params) {
   #define DENSITY 0.5
   #define PI 3.14159265
 
-  #define NUM_STEPS 100
+  #define NUM_STEPS 50
   
-  float volumetricShadow(in vec3 from, in vec3 to)
-  {
-    const float numStep = 16.0; // quality control. Bump to avoid shadow alisaing
-    float shadow = 1.0;
-    float muS = 0.0;
-    float muE = 0.0;
-    float muA = 0.05;
-    float dd = length(to-from) / numStep;
-    for(float s=0.5; s<(numStep-0.1); s+=1.0)// start at 0.5 to sample at center of integral part
-    {
-        vec3 pos = from + (to - from) * (s / (numStep));
-        // getParticipatingMedia(muS, muE, pos);
-        
-        // muS = s > tNear && s < tFar ? 0.5 : 0.02;
-        // muE = max(0.0000001, muA + muS);
-
-        shadow *= exp(-muE * dd);
-    }
-
-    return shadow;
-  }
-
   float shadowMap(vec3 pos, vec3 nor, vec3 col)
   {
     vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
@@ -235,7 +214,7 @@ export default function(params) {
 
 #define VOLUME
 #ifdef VOLUME
-    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv*0.5);
+    vec4 volTexSample00 = texture(u_volPassBuffer, v_uv * u_upscaleFactor);
     fragColor *= volTexSample00.w;
     fragColor += volTexSample00.xyz;
 #endif

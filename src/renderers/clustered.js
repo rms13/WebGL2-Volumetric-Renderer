@@ -301,5 +301,4 @@ export default class ClusteredRenderer {
 
     this._clusterTexture.update();
   }
-
 }

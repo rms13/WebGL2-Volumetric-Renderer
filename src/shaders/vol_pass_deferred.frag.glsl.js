@@ -251,8 +251,8 @@ export default function(params) {
     for(float i = 1.0; i <= len; i += stepSize) {
       // Get ray marched point
       vec3 p = rayOriginVol + (i * rayDirectionVol);
-      vec3 pWorld = (u_invVolTransMat * vec4(p, 1.0)).xyz;//rayOrigin + i * rayDirection;
-      vec2 pUv = pWorld.xy * 0.5 + 0.5;
+      // vec3 pWorld = (u_invVolTransMat * vec4(p, 1.0)).xyz;//rayOrigin + i * rayDirection;
+      // vec2 pUv = pWorld.xy * 0.5 + 0.5;
 
       // add fog value to muS..
       vec3 p1 = p;
@@ -263,44 +263,44 @@ export default function(params) {
 
       // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..
 
-      ivec3 clusterPos = ivec3(
-        int(pUv.x / u_screenW * float(${params.xSlices})),
-        int(pUv.y / u_screenH * float(${params.ySlices})),
-        int((-(u_viewMatrix * vec4(pWorld,1.0)).z - u_camN) / (u_camF - u_camN) * float(${params.zSlices}))
-      );
+      // ivec3 clusterPos = ivec3(
+      //   int(pUv.x / u_screenW * float(${params.xSlices})),
+      //   int(pUv.y / u_screenH * float(${params.ySlices})),
+      //   int((-(u_viewMatrix * vec4(pWorld,1.0)).z - u_camN) / (u_camF - u_camN) * float(${params.zSlices}))
+      // );
 
-      int clusterIdx = clusterPos.x + clusterPos.y * ${params.xSlices} + clusterPos.z * ${params.xSlices} * ${params.ySlices};
-      int clusterWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
-      int clusterHeight = int(float(${params.maxLights}+1) / 4.0) + 1;
-      float clusterU = float(clusterIdx + 1) / float(clusterWidth + 1); // like u in UnpackLight()..
+      // int clusterIdx = clusterPos.x + clusterPos.y * ${params.xSlices} + clusterPos.z * ${params.xSlices} * ${params.ySlices};
+      // int clusterWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
+      // int clusterHeight = int(float(${params.maxLights}+1) / 4.0) + 1;
+      // float clusterU = float(clusterIdx + 1) / float(clusterWidth + 1); // like u in UnpackLight()..
 
-      int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
+      // int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
 
       vec3 scat = vec3(0.0);// = muS * Li * phaseFunction();
 
       for (int j = 0; j < ${params.numLights}; j++) {
-        if(j >= numLights) {
-          break;
-        }
+        // if(j >= numLights) {
+        //   break;
+        // }
 
-        int clusterPixel = int(float(j+1) / 4.0);
-        float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
-        vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
-        int lightIdx;
-        int clusterPixelComponent = (j+1) - (clusterPixel * 4);
-        if (clusterPixelComponent == 0) {
-            lightIdx = int(texel[0]);
-        } else if (clusterPixelComponent == 1) {
-            lightIdx = int(texel[1]);
-        } else if (clusterPixelComponent == 2) {
-            lightIdx = int(texel[2]);
-        } else if (clusterPixelComponent == 3) {
-            lightIdx = int(texel[3]);
-        }
+        // int clusterPixel = int(float(j+1) / 4.0);
+        // float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
+        // vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
+        // int lightIdx;
+        // int clusterPixelComponent = (j+1) - (clusterPixel * 4);
+        // if (clusterPixelComponent == 0) {
+        //     lightIdx = int(texel[0]);
+        // } else if (clusterPixelComponent == 1) {
+        //     lightIdx = int(texel[1]);
+        // } else if (clusterPixelComponent == 2) {
+        //     lightIdx = int(texel[2]);
+        // } else if (clusterPixelComponent == 3) {
+        //     lightIdx = int(texel[3]);
+        // }
 
-        // shading
-        Light light = UnpackLight(lightIdx);
-
+        // // shading
+        // Light light = UnpackLight(lightIdx);
+        Light light = UnpackLight(j);
         vec3 L = (u_volTransMat * vec4(light.position, 1.0)).xyz - p;
         vec3 Li = light.color / dot(L, L);
         scat += muS * Li * phaseFunction();

@@ -35,7 +35,8 @@ const params = {
   Heterogenous: true,
   Scattering: 0.05,
   Absorption: 0.05,
-  UpscaleFactor: 32,
+  UpscaleFactor: 4,
+  Interpolation: 0,
 
   Debug: false,
   Pass: 0
@@ -87,7 +88,8 @@ var volumePosFolder = volumeFolder.addFolder('Position');
 var volumeScaleFolder = volumeFolder.addFolder('Scale');
 var volumeCoeffsFolder = volumeFolder.addFolder('Scattering Properties');
 volumeFolder.add(params, 'Heterogenous');
-volumeFolder.add(params, 'UpscaleFactor', { '1/2': 2, '1/4': 4, '1/16': 16, '1/32': 32 });
+volumeFolder.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
+volumeFolder.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 volumePosFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
 volumePosFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
 volumePosFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
@@ -118,7 +120,7 @@ function render() {
     params.Light2Color, params.Light2Intensity, params.Light2PosX, params.Light2PosZ,
     params.VolumePosX, params.VolumePosY, params.VolumePosZ,
     params.VolumeScaleX, params.VolumeScaleY, params.VolumeScaleZ,
-    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption);
+    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Interpolation);
 }
 
 makeRenderLoop(render)();

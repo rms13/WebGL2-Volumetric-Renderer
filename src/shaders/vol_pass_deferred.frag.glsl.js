@@ -149,7 +149,7 @@ export default function(params) {
     vec3 sunCol       = vec3(0.5, 0.5, 0.4);
     vec4 rgbaDepth    = texture(u_shadowMap, shadowCoord.xy);
     float depth       = rgbaDepth.r; // Retrieve the z-value from R
-    float visibility  = (shadowCoord.z > depth+0.005)? 0.3 : 1.0;  
+    float visibility  = (shadowCoord.z > depth+0.005)? 0.0 : 1.0;  
     return visibility;
   }
 
@@ -220,7 +220,8 @@ export default function(params) {
       #define USESHADOW 
       #ifdef USESHADOW
         float shadow = shadowMap(p.xyz - u_volTransMat[3].xyz);
-        scat += max(5.0 * shadow, 0.2) * muS * Li * phaseFunction();
+        //shadow = shadow==0.0 ? 0.1 : 
+        scat += 5.0 * (shadow+0.01) * muS * Li * phaseFunction();
       #else
         scat += muS * Li * phaseFunction();     
       #endif

@@ -45,8 +45,6 @@ const params = {
   DebugVolume: false,
   DebugShadow: false,
 
-  NumLights: 10,
-
   AltFrame: 0,
   ToneMapType: 0,
   Exposure: 1.0,
@@ -81,7 +79,6 @@ gui.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
 gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 gui.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
-gui.add(params, 'NumLights', 10, 100).onChange(setRenderer);
 dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
 dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
@@ -129,8 +126,15 @@ camera.position.set(-10, 8, 0);
 cameraControls.target.set(0, 2, 0);
 gl.enable(gl.DEPTH_TEST);
 
+var perf = 0;
+var perfcount = 0
 function render() {
-  scene.update(params.NumLights, params.Intensity);
+	// if(this.perf === undefined) {
+ //      this.perf = 0;
+ //      this.perfcount = 0;
+ //    }
+  scene.update(params.Intensity);
+  var t0 = performance.now();
   params._renderer.render(camera, scene, 
     // Debug
     params.DebugVolume,
@@ -145,6 +149,13 @@ function render() {
     params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation, 
     params.AltFrame, params.ToneMapType, params.Exposure,
     params.DirLightPosX, params.DirLightPosZ, params.DirLightCol);
+
+    var t1 = performance.now();
+    perfcount++;
+    perf += (t1-t0);
+    if(perfcount===100){
+      console.log(perf);
+    }
 }
 
 makeRenderLoop(render)();

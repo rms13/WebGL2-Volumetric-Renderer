@@ -517,7 +517,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Bind any uniform variables
     gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this._lightViewProjectionMatrix);
     gl.uniform1i(this._progShadowMap.u_debugShadow, debugShadow);
+
+    
     scene.draw(this._progShadowMap);
+
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // renderFullscreenQuad(this._progShadowMap);
 
@@ -540,6 +543,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniformMatrix4fv(this._progCopy.u_viewMatrix, false, this._viewMatrix);
     // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
     scene.draw(this._progCopy);
+
+    
     // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     // renderFullscreenQuad(this._progShadowMap);
 
@@ -588,6 +593,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       this.renVol != this.renVol;
     }
 
+
+
+
+
     if(this.renVol === true) {
       this.renderVolumePass(volShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
         light2Col, light2Intensity, light2PosX, light2PosZ,
@@ -595,6 +604,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         volScaleX, volScaleY, volScaleZ,
         upscaleFactor, heterogenous, scattering, absorption, density, dirLightCol);
     }
+    
+
     
     this.renderFinalPass(finalShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
       light2Col, light2Intensity, light2PosX, light2PosZ,

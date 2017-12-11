@@ -43,6 +43,8 @@ const params = {
   
   DebugVolume: false,
   DebugShadow: false,
+
+  AltFrame: 0
 };
 
 setRenderer(params.renderer);
@@ -68,6 +70,7 @@ gui.add(params, 'Heterogenous');
 gui.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
 gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
+gui.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
 dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
 
@@ -123,7 +126,7 @@ function render() {
     params.VolumePosX, params.VolumePosY, params.VolumePosZ,
     params.VolumeScaleX, params.VolumeScaleY, params.VolumeScaleZ,
     // General
-    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation,
+    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation, params.AltFrame,
     params.DirLightPosX, params.DirLightPosZ);
 }
 

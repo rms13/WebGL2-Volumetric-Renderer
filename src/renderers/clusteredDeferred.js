@@ -216,6 +216,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // mat4.lookAt(this._lightViewProjectionMatrix, dirLightPos, vec3.fromValues(0.0,0.0,0.0), vec3.fromValues(0.0,1.0,0.0));
 
     this.first = true;
+    this.renVol = true;
   }
 
   setupDrawBuffers(width, height) {
@@ -360,7 +361,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   createVolumeBuffer(pos, upscaleFactor, heterogenous) {
     // CREATE AND BING THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
-    this.SIZE = upscaleFactor;
+    this.SIZE = 64;
     var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
     this.data = new Uint8Array(this.SIZE * this.SIZE * this.SIZE);
     for (var k = 0; k < this.SIZE; ++k) {
@@ -450,7 +451,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         light2Col, light2Intensity, light2PosX, light2PosZ,
         volPosX, volPosY, volPosZ,
         volScaleX, volScaleY, volScaleZ,
-        upscaleFactor, heterogenous, scattering, absorption, density, interpolation,
+        upscaleFactor, heterogenous, scattering, absorption, density, interpolation, altFrame,
         dirLightX, dirLightZ) 
   {
     if (canvas.width != this._width || canvas.height != this._height) {
@@ -469,7 +470,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Shadow
     //--------------------------------------------------  
 
-    mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 200);
+    mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 20);
     mat4.lookAt(this._lightViewMatrix, vec3.fromValues(dirLightX, 4.0, dirLightZ), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
     mat4.multiply(this._lightViewProjectionMatrix, this._lightProjectionMatrix, this._lightViewMatrix);
 
@@ -546,11 +547,23 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       this._interpolationMethod = interpolation;
     }
 
-    this.renderVolumePass(volShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
-      light2Col, light2Intensity, light2PosX, light2PosZ,
-      volPosX, volPosY, volPosZ,
-      volScaleX, volScaleY, volScaleZ,
-      upscaleFactor, heterogenous, scattering, absorption, density);
+    if(this.framenum === undefined) this.framenum = 0.0;
+    this.framenum+=0.05;
+
+    if(altFrame === 0) {
+      this.renVol = true;
+    }
+    else {
+      this.renVol != this.renVol;
+    }
+
+    if(this.renVol === true) {
+      this.renderVolumePass(volShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
+        light2Col, light2Intensity, light2PosX, light2PosZ,
+        volPosX, volPosY, volPosZ,
+        volScaleX, volScaleY, volScaleZ,
+        upscaleFactor, heterogenous, scattering, absorption, density);
+    }
     
     this.renderFinalPass(finalShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
       light2Col, light2Intensity, light2PosX, light2PosZ,
@@ -680,8 +693,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniformMatrix4fv(shaderProgram.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
     gl.uniformMatrix4fv(shaderProgram.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
 
-    if(this.framenum === undefined) this.framenum = 0.0;
-    this.framenum+=0.05;
     gl.uniform1f(shaderProgram.u_time, this.framenum);
 
     // Bind g-buffers

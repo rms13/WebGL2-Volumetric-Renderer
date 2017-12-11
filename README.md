@@ -3,7 +3,9 @@ A WebGL 2.0 Volumetric Renderer inspired by [Frostbite's Physically Based Volume
 
 __Team: Rishabh Shah and Jonathan Lee__
 
-Jump to [live demo!](images/demodummmy.PNG)
+Jump to [live demo!]()
+
+![Demo Video](images/Etc/demodummy.PNG)
 
 ## Project Overview
 Volumetric rendering is a very desirable feature in renderers. Analytical techniques have been used since a long time to have volumetric effects in games and real-time engines. With the increase of GPU computation power, modern game engines are moving towards more physically-based approaches to volumetric rendering. But, we are yet to see good web based volumetric renderers, which was the inspiration behind the project.
@@ -50,7 +52,12 @@ Shadow Mapping is the first pass of our renderer. Here, we essentially render th
 
 We have only one light (Sun) shadow mapped. It is typical for real-time engines to not shadow map all the lights in the scene.
 
-[Shadow Map](!)
+| Shadow Map   |  Shadow Render |
+|---|---|
+|![Shadow Map](images/Passes/shadow.png)  |   <img src="images/Passes/sponzashadow.PNG" width="400"> |
+
+
+
 
 #### Volume Rendering
 Next pass in our pipeline is volume rendering. Our volumes are represented as 3D density textures (something like frostbite). This makes the volumes authorable by artists. Our density texture is random noise. The texture is low resolution (64 x 64 x 64), which gets up-sampled and smoothed out using WebGL 2.0's native tri-linear interpolation, which is very very fast.
@@ -62,10 +69,10 @@ A __single-lobe Henyey-Greenstein phase function__ is used to compute the light 
 
 A ray is marched through the volume and rendered to a texture. We store the scattering as rgb components of the texture and transmittance as the w component.
 
+![Volume Pass](images/Passes/sponzavolume.PNG) 
+
 ##### Volume Upsampling
 One of the optimizations we can do, because of the deferred pipeline, is rendering smaller volume textures and up-sampling them for final rendering. This leads to some artefacts depending on how much you downscale the volume pass.
-
-[perf](!)
 
 The GUI has an option for interpolation method. Linear interpolation is generally better than nearest neighbour.
 
@@ -81,6 +88,19 @@ As we have a lot of lights in the scene, which are really bright sometimes, area
 #### Tone Mapping
 The 32bit-float values are toned down in this pass to something our screens can render. We have an option of linear, Reinhard, and [Uncharted 2]() tone mapping. Uncharted 2 tone mapping give really good results consistently.
 
+| Linear/Default | Reinhard | Uncharted |
+|--------|----------|-----------|
+|![](images/Tonemapping/30Linear.PNG) | ![](images/Tonemapping/30Rein.PNG) | ![](images/Tonemapping/30_Uncharted_EveryFrame.PNG) |
+
+#### Pipeline
+
+| Shadow Pass   | G-Buffer | Volume Pass |
+|---|--|---|
+|<img src="images/Passes/sponzashadow.PNG" width="300"> | <img src="images/Passes/gbuffer.PNG"> | <img src="images/Passes/sponzavolume.PNG" width="300">  |
+
+| "Final" Shading  | Post Process/Tone Mapping |
+|---|---|
+|<img src="images/Passes/beforetone.PNG" width="300"> | <img src="images/Passes/final.PNG" width="300">  |
 
 ## Performance Analysis
 
@@ -98,7 +118,7 @@ _10 lights, 1/4 volume texture scale, rendering every frame_
 |total|	0.7909|
 |frame skip|	0.769|
 
-![comparison](images/passes.png)
+![comparison](images/Analysis/passes.png)
 
 ### Performance for number of lights
 
@@ -117,7 +137,7 @@ _1/4 volume texture scale, rendering every frame_
 |90|	1.5246|
 |100|	1.94275|
 
-![lights](images/lights.png)
+![lights](images/Analysis/lights.png)
 
 ### Laptop vs. Desktop Performance comparison
 
@@ -128,10 +148,13 @@ _30 lights, 1/4 volume texture scale, rendering every frame_
 |Laptop (ms)|	2.1847|	2.304	|2.47824|
 |Desktop (ms)|	0.7323|	0.7909|	0.8165|
 
-![comparison](images/lap_desk.png)
+![comparison](images/Analysis/lap_desk.png)
 
-## Conclusion
-
+## Future Work
+- Temporal Integration and Anti-Aliasing
+- OBJ/GLTF Loading for volumes and scene
+- Volumetric Shadow Mapping + Point Light Shadows
+- Saving 3D textures and intermediate step for volumetric integration (WebGL doesn't allow this)
 
 ## Team Performance
 
@@ -154,3 +177,6 @@ _30 lights, 1/4 volume texture scale, rendering every frame_
 - [Physically-based & Unified Volumetric Rendering ](https://www.ea.com/frostbite/news/physically-based-unified-volumetric-rendering-in-frostbite)
 - [Volumetric Fog: Unified Compute Shader Based Solution to Atmospheric Scattering ](https://bartwronski.files.wordpress.com/2014/08/bwronski_volumetric_fog_siggraph2014.pdf)
 - [Fast, Flexible, Physically-Based Volumetric Scattering ](https://developer.nvidia.com/sites/default/files/akamai/gameworks/downloads/papers/NVVL/Fast_Flexible_Physically-Based_Volumetric_Light_Scattering.pdf)
+- [Improved Scattering](https://www.shadertoy.com/view/XlBSRz)
+- [Shadow Mapping](http://www.chinedufn.com/webgl-shadow-mapping-tutorial/)
+- [Uncharted 2 Tonemapping](http://filmicworlds.com/blog/filmic-tonemapping-operators/)

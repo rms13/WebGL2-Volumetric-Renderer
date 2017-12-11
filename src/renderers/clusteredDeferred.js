@@ -425,9 +425,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     
     // Shadow Map
     gl.bindTexture(gl.TEXTURE_2D, this._shadowDepthTex);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16, 1024, 1024, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.DEPTH_COMPONENT16, width, height, 0, gl.DEPTH_COMPONENT, gl.UNSIGNED_SHORT, null);
     gl.bindTexture(gl.TEXTURE_2D, this._shadowMapTexture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, 1024, 1024, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
 
     // volume pass..
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
@@ -435,7 +435,10 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this.w += width;
     this.h = (height % 8);
     this.h += height;
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.w/2, this.h/2, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
+
+    gl.bindTexture(gl.TEXTURE_2D, this._finalTexHDR);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
 
     gl.bindTexture(gl.TEXTURE_2D, null);
   }

@@ -3,7 +3,7 @@ A WebGL 2.0 Volumetric Renderer inspired by [Frostbite's Physically Based Volume
 
 __Team: Rishabh Shah and Jonathan Lee__
 
-Jump to [live demo!]()
+Jump to [live demo!](https://rms13.github.io/WebGL2-Volumetric-Renderer/)
 
 ![Demo Video](images/Etc/demodummy.PNG)
 
@@ -90,17 +90,17 @@ The 32bit-float values are toned down in this pass to something our screens can 
 
 | Linear/Default | Reinhard | Uncharted |
 |--------|----------|-----------|
-|![](images/Tonemapping/30Linear.PNG) | ![](images/Tonemapping/30Rein.PNG) | ![](images/Tonemapping/30_Uncharted_EveryFrame.PNG) |
+|![](images/Tonemapping/30linear.PNG) | ![](images/Tonemapping/30rein.PNG) | ![](images/Tonemapping/30_Uncharted_EveryFrame.PNG) |
 
 #### Pipeline
 
 | Shadow Pass   | G-Buffer | Volume Pass |
 |---|--|---|
-|<img src="images/Passes/sponzashadow.PNG" width="300"> | <img src="images/Passes/gbuffer.PNG"> | <img src="images/Passes/sponzavolume.PNG" width="300">  |
+|<img src="images/Passes/sponzashadow.PNG" width="300"> | <img src="images/Passes/gbuffer.png"> | <img src="images/Passes/sponzavolume.PNG" width="300">  |
 
 | "Final" Shading  | Post Process/Tone Mapping |
 |---|---|
-|<img src="images/Passes/beforetone.PNG" width="300"> | <img src="images/Passes/final.PNG" width="300">  |
+|<img src="images/Passes/beforetone.png" width="300"> | <img src="images/Passes/final.PNG" width="300">  |
 
 ## Performance Analysis
 

@@ -2,7 +2,7 @@ import { mat4, vec4, vec3 } from 'gl-matrix';
 import { NUM_LIGHTS } from '../scene';
 import TextureBuffer from './textureBuffer';
 
-export const MAX_LIGHTS_PER_CLUSTER = 10;
+export const MAX_LIGHTS_PER_CLUSTER = 40;
 
 export default class ClusteredRenderer {
   constructor(xSlices, ySlices, zSlices) {

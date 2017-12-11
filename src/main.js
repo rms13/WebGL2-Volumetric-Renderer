@@ -45,6 +45,8 @@ const params = {
   DebugVolume: false,
   DebugShadow: false,
 
+  NumLights: 10,
+
   AltFrame: 0,
   ToneMapType: 0,
   Exposure: 1.0,
@@ -79,6 +81,7 @@ gui.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
 gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 gui.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
+gui.add(params, 'NumLights', 10, 100).onChange(setRenderer);
 dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
 dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
@@ -103,6 +106,10 @@ light2Folder.add(params, 'Light2Intensity', 1, 30).name('Intensity').onChange(se
 light2Folder.close();
 
 var volumeFolder = sandboxFolder.addFolder('Volume Position');
+var volumeScaleFolder = sandboxFolder.addFolder('Scale');
+volumeScaleFolder.add(params, 'VolumeScaleX', 0.25, 4).onChange(setRenderer);
+volumeScaleFolder.add(params, 'VolumeScaleY', 0.25, 4).onChange(setRenderer);
+volumeScaleFolder.add(params, 'VolumeScaleZ', 0.25, 4).onChange(setRenderer);
 volumeFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
 volumeFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
 volumeFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
@@ -123,7 +130,7 @@ cameraControls.target.set(0, 2, 0);
 gl.enable(gl.DEPTH_TEST);
 
 function render() {
-  scene.update(params.Intensity);
+  scene.update(params.NumLights, params.Intensity);
   params._renderer.render(camera, scene, 
     // Debug
     params.DebugVolume,

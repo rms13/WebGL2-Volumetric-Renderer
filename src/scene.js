@@ -8,7 +8,7 @@ export const LIGHT_RADIUS = 5.0;
 export const LIGHT_DT = -0.03;
 
 // TODO: This controls the number of lights
-export const NUM_LIGHTS = 10;
+export const NUM_LIGHTS = 40;
 
 class Scene {
   constructor() {
@@ -160,7 +160,29 @@ class Scene {
     });
   }
 
-  update(intensity) {
+  update(numLights, intensity) {
+    // if(Math.ceil(numLights) != NUM_LIGHTS) {
+    //   this.lights = [];
+
+    //   for (let i = 0; i < Math.ceil(numLights); ++i) {
+    //     this.lights.push({
+    //       position: new Float32Array([
+    //         Math.random() * (LIGHT_MAX[0] - LIGHT_MIN[0]) + LIGHT_MIN[0],
+    //         Math.random() * (LIGHT_MAX[1] - LIGHT_MIN[1]) + LIGHT_MIN[1],
+    //         Math.random() * (LIGHT_MAX[2] - LIGHT_MIN[2]) + LIGHT_MIN[2],
+    //       ]),
+    //       color: new Float32Array([
+    //         0.5 + 0.5 * Math.random(),
+    //         0.5 + 0.5 * Math.random(),
+    //         0.5 + 0.5 * Math.random(),
+    //       ]),
+    //       radius: LIGHT_RADIUS,
+    //     });
+    //   }   
+
+    //   NUM_LIGHTS = Math.ceil(numLights);   
+    // }
+
     if(this.intensity !== intensity) {
       for (let i = 0; i < NUM_LIGHTS; i++) {
         this.lights[i].color[0] /= this.intensity;

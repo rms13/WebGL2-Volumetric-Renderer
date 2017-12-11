@@ -8,7 +8,8 @@ export const LIGHT_RADIUS = 5.0;
 export const LIGHT_DT = -0.03;
 
 // TODO: This controls the number of lights
-export const NUM_LIGHTS = 40;
+// Lab machines max at 40
+export const NUM_LIGHTS = 10;
 
 class Scene {
   constructor() {

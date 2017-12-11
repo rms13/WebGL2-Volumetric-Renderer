@@ -45,7 +45,10 @@ const params = {
   DebugVolume: false,
   DebugShadow: false,
 
-  AltFrame: 0
+  AltFrame: 0,
+  ToneMapType: 0,
+  Exposure: 1.0,
+  Intensity: 1.0
 };
 
 setRenderer(params.renderer);
@@ -70,6 +73,9 @@ var dirLight = gui.addFolder('Directional Light');
 var dirLightPositions = dirLight.addFolder('Position');
 gui.add(params, 'Heterogenous');
 gui.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
+gui.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
+gui.add(params, 'Exposure', -5.0, 5.0);
+gui.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
 gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 gui.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
@@ -117,7 +123,7 @@ cameraControls.target.set(0, 2, 0);
 gl.enable(gl.DEPTH_TEST);
 
 function render() {
-  scene.update();
+  scene.update(params.Intensity);
   params._renderer.render(camera, scene, 
     // Debug
     params.DebugVolume,
@@ -129,8 +135,9 @@ function render() {
     params.VolumePosX, params.VolumePosY, params.VolumePosZ,
     params.VolumeScaleX, params.VolumeScaleY, params.VolumeScaleZ,
     // General
-    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation, params.AltFrame,
-    params.DirLightPosX, params.DirLightPosZ, params.DirLightCol);
+    params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation, 
+    params.AltFrame, params.ToneMapType, params.Exposure,
+    params.DirLightPosX, params.DirLightPosZ);
 }
 
 makeRenderLoop(render)();

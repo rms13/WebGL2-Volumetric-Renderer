@@ -12,18 +12,9 @@ export const NUM_LIGHTS = 10;
 
 class Scene {
   constructor() {
+    this.intensity = 1.0;
     this.lights = [];
     this.models = [];
-
-    // this.lights.push({
-    //   position: new Float32Array([0, 5, 0]),
-    //   color: new Float32Array([
-    //     0.5 + 0.5 * Math.random(),
-    //     0.5 + 0.5 * Math.random(),
-    //     0.5 + Math.random(),
-    //   ]),
-    //   radius: LIGHT_RADIUS,
-    // });
 
     for (let i = 0; i < NUM_LIGHTS; ++i) {
       this.lights.push({
@@ -35,7 +26,7 @@ class Scene {
         color: new Float32Array([
           0.5 + 0.5 * Math.random(),
           0.5 + 0.5 * Math.random(),
-          0.5 + Math.random(),
+          0.5 + 0.5 * Math.random(),
         ]),
         radius: LIGHT_RADIUS,
       });
@@ -169,7 +160,19 @@ class Scene {
     });
   }
 
-  update() {
+  update(intensity) {
+    if(this.intensity !== intensity) {
+      for (let i = 0; i < NUM_LIGHTS; i++) {
+        this.lights[i].color[0] /= this.intensity;
+        this.lights[i].color[1] /= this.intensity;
+        this.lights[i].color[2] /= this.intensity;
+
+        this.lights[i].color[0] *= intensity;
+        this.lights[i].color[1] *= intensity;
+        this.lights[i].color[2] *= intensity;
+      }
+      this.intensity = intensity;
+    }
     for (let i = 0; i < NUM_LIGHTS; i++) {
       // OPTIONAL TODO: Edit if you want to change how lights move
       this.lights[i].position[1] += LIGHT_DT;

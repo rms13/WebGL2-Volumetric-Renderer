@@ -247,14 +247,14 @@ export default function(params) {
 #endif
 
     // Gamma Correction
-    fragColor = pow(fragColor, vec3(1.0 / 2.2));
+    // fragColor = pow(fragColor, vec3(1.0 / 2.2));
 
     //fragColor = vec3(float(clusterPos.z)/16.0);
     out_Color = vec4(fragColor.xyz, 1.0);
 
     // DEBUG VIEWS
     if(u_debugVolume == 1) {
-      out_Color = vec4(10.0 * volTexSample00.xyz, 1.0);
+      out_Color = vec4(volTexSample00.xyz, 1.0);
     }
 
     if(u_debugShadow == 1) {
@@ -262,7 +262,7 @@ export default function(params) {
     }
 
     if(u_debugShadow == 1 && u_debugVolume == 1) {
-      out_Color = vec4(debugShadowMap(v_position, normal, albedo), 1.0) + vec4(10.0 * volTexSample00.xyz, 1.0);
+      out_Color = vec4(debugShadowMap(v_position, normal, albedo), 1.0) + vec4(volTexSample00.xyz, 1.0);
     }
   }
   `;

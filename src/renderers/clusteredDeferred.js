@@ -13,6 +13,8 @@ import shadowFrag from '../shaders/shadow.frag.glsl.js';
 import VolPassVertSource from '../shaders/vol_pass_deferred.vert.glsl';
 import VolPassFragSource from '../shaders/vol_pass_deferred.frag.glsl.js';
 import VolSandboxPassFragSource from '../shaders/vol_sandbox_pass_deferred.frag.glsl.js';
+import toneMapFrag from '../shaders/toneMap.frag.glsl';
+import toneMapVert from '../shaders/toneMap.vert.glsl';
 import TextureBuffer from './textureBuffer';
 import ClusteredRenderer from './clustered';
 
@@ -203,6 +205,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       attribs:  [ 'a_position'  ]
     });
 
+    this._progToneMap = loadShaderProgram(toneMapVert, toneMapFrag, {
+      uniforms: ['u_HDRTexture', 'u_toneMapType', 'u_exposure'],
+      attribs:  ['a_position', 'a_uv']
+    });
+
     this._projectionMatrix          = mat4.create();
     this._viewMatrix                = mat4.create();
     this._invViewMatrix             = mat4.create();
@@ -348,13 +355,32 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this.w += width;
     this.h = (height % 8);
     this.h += height;
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, this.w, this.h, 0, gl.RGBA, gl.FLOAT, null);
     gl.bindTexture(gl.TEXTURE_2D, null);
     
     this._fboVolPass = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboVolPass);
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._volPassTex, 0);
     
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
+      throw "Framebuffer incomplete";
+    }
+
+    // final pass texture to tonemap..
+
+    this._finalTexHDR = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, this._finalTexHDR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA32F, width, height, 0, gl.RGBA, gl.FLOAT, null);
+    gl.bindTexture(gl.TEXTURE_2D, null);
+
+    this._fboFinalPassHDR = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboFinalPassHDR);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, this._finalTexHDR, 0);
+
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) != gl.FRAMEBUFFER_COMPLETE) {
       throw "Framebuffer incomplete";
     }
@@ -455,8 +481,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         light2Col, light2Intensity, light2PosX, light2PosZ,
         volPosX, volPosY, volPosZ,
         volScaleX, volScaleY, volScaleZ,
-        upscaleFactor, heterogenous, scattering, absorption, density, interpolation, altFrame,
-        dirLightX, dirLightZ, dirLightCol) 
+        upscaleFactor, heterogenous, scattering, absorption, density, interpolation, 
+        altFrame, toneMapType, exposure,
+        dirLightX, dirLightZ)
   {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);
@@ -574,6 +601,8 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       volPosX, volPosY, volPosZ,
       volScaleX, volScaleY, volScaleZ,
       upscaleFactor, heterogenous, scattering, absorption, dirLightCol);
+
+    this.toneMapPass(this._progToneMap, toneMapType, exposure);
   }
 
   updateVolume(upscaleFactor, heterogenous, pos, scale, orient)
@@ -744,7 +773,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   {
     gl.viewport(0, 0, canvas.width, canvas.height);
     // Bind the default null framebuffer which is the screen
-    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this._fboFinalPassHDR);
     // Clear the frame
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
@@ -870,5 +899,27 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+
+  toneMapPass(shaderProgram, toneMapType, exposure)
+  {
+    gl.viewport(0, 0, canvas.width, canvas.height);
+    // Bind the default null framebuffer which is the screen
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    // Clear the frame
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Use this shader program
+    gl.useProgram(shaderProgram.glShaderProgram);
+    
+    gl.uniform1i(shaderProgram.u_toneMapType, toneMapType);
+    gl.uniform1f(shaderProgram.u_exposure, exposure);
+
+    // bind volume pass texture
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, this._finalTexHDR);
+    gl.uniform1i(shaderProgram[`u_HDRTexture`], 0);
+
+    renderFullscreenQuad(shaderProgram); 
   }
 };

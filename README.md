@@ -3,7 +3,7 @@ A WebGL 2.0 Volumetric Renderer inspired by [Frostbite's Physically Based Volume
 
 __Team: Rishabh Shah and Jonathan Lee__
 
-Jump to [live demo!]()
+Jump to [live demo!](images/demodummmy.PNG)
 
 ## Project Overview
 Volumetric rendering is a very desirable feature in renderers. Analytical techniques have been used since a long time to have volumetric effects in games and real-time engines. With the increase of GPU computation power, modern game engines are moving towards more physically-based approaches to volumetric rendering. But, we are yet to see good web based volumetric renderers, which was the inspiration behind the project.

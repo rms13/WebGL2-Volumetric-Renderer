@@ -68,15 +68,24 @@ volFolder.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRend
 volFolder.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 volFolder.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 volFolder.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
+var volPosFolder = volFolder.addFolder('Position');
+var volScaleFolder = volFolder.addFolder('Scale');
+volScaleFolder.add(params, 'VolumeScaleX', 0.25, 4).name('X').onChange(setRenderer);
+volScaleFolder.add(params, 'VolumeScaleY', 0.25, 4).name('Y').onChange(setRenderer);
+volScaleFolder.add(params, 'VolumeScaleZ', 0.25, 4).name('Z').onChange(setRenderer);
+volPosFolder.add(params, 'VolumePosX', -10, 10).name('X').onChange(setRenderer);
+volPosFolder.add(params, 'VolumePosY', -10, 10).name('Y').onChange(setRenderer);
+volPosFolder.add(params, 'VolumePosZ', -10, 10).name('Z').onChange(setRenderer);
+volFolder.close();
 
-var toneMapFolder = gui.addFolder('Tonemapping, Exposure, Lights');
+var toneMapFolder = gui.addFolder('Tonemapping and Exposure');
 toneMapFolder.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
 toneMapFolder.add(params, 'Exposure', -5.0, 5.0);
-toneMapFolder.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
 
 var dirLight = gui.addFolder('Directional Light');
-var dirLightPositions = dirLight.addFolder('Position');
 dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
+dirLight.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
+var dirLightPositions = dirLight.addFolder('Position');
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
 dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
 
@@ -99,15 +108,7 @@ light2Folder.addColor(params, 'Light2Color').name('Color').onChange(setRenderer)
 light2Folder.add(params, 'Light2Intensity', 1, 30).name('Intensity').onChange(setRenderer);
 light2Folder.close();
 
-var volumeFolder = sandboxFolder.addFolder('Volume Position');
-var volumeScaleFolder = sandboxFolder.addFolder('Volume Scale');
-volumeScaleFolder.add(params, 'VolumeScaleX', 0.25, 4).onChange(setRenderer);
-volumeScaleFolder.add(params, 'VolumeScaleY', 0.25, 4).onChange(setRenderer);
-volumeScaleFolder.add(params, 'VolumeScaleZ', 0.25, 4).onChange(setRenderer);
-volumeFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
-volumeFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
-volumeFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
-volumeFolder.close();
+
 
 var debugFolder = gui.addFolder('Debug');
 debugFolder.add(params, 'DebugShadow').name('Shadow Pass').onChange(setRenderer);

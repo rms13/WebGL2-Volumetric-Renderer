@@ -36,7 +36,7 @@ const params = {
   Interpolation: 0,
   DirLightPosX: 0.5,
   DirLightPosZ: 0.5,
-  DirLightCol: [125, 125, 125],
+  DirLightCol: [255, 240, 218],
   
   DebugVolume: false,
   DebugShadow: false,

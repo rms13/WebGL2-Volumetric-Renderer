@@ -104,6 +104,9 @@ The 32bit-float values are toned down in this pass to something our screens can 
 
 ## Performance Analysis
 
+Unless mentioned, all the render timings are based on:
+_Google Chrome 61.0.3163.100 on Windows 10, Xeon ES-1630 @ 3.70GHz 32GB, GTX 1070 24GB_
+
 ### Render Passes Performance Comparison
 
 _10 lights, 1/4 volume texture scale, rendering every frame_
@@ -143,6 +146,10 @@ _1/4 volume texture scale, rendering every frame_
 
 _30 lights, 1/4 volume texture scale, rendering every frame_
 
+Laptop: _Google Chrome 62.0.3202.94 on Windows 10, i7-6700HQ @ 2.6GHz 16GB, GTX 960M 4096MB_
+
+Desktop: _Google Chrome 61.0.3163.100 on Windows 10, Xeon ES-1630 @ 3.70GHz 32GB, GTX 1070 24GB_
+
 |Volume Downscale |16|	4|	1|
 |---|---|---|---|
 |Laptop (ms)|	2.1847|	2.304	|2.47824|
@@ -156,22 +163,11 @@ _30 lights, 1/4 volume texture scale, rendering every frame_
 - Volumetric Shadow Mapping + Point Light Shadows
 - Saving 3D textures and intermediate step for volumetric integration (WebGL doesn't allow this)
 
-## Team Performance
-
-- Primary goals:
-    - prim1
-
-- Secondary goals:
-    - sec1
-
-- Yet to implement secondary goals:
-    - ter1
-
 ## Project Timeline
-- 11/20:
-- 11/27:
-- 12/04:
-- 12/11:
+- 11/20: Deferred pipeline setup, volume loading, naive marching
+- 11/27: Physically based volumetric rendering
+- 12/04: Shadow mapping, volume rendering optimizations
+- 12/11: Fix bugs, tone-mapping, demo, readme
 
 # References
 - [Physically-based & Unified Volumetric Rendering ](https://www.ea.com/frostbite/news/physically-based-unified-volumetric-rendering-in-frostbite)
@@ -179,4 +175,6 @@ _30 lights, 1/4 volume texture scale, rendering every frame_
 - [Fast, Flexible, Physically-Based Volumetric Scattering ](https://developer.nvidia.com/sites/default/files/akamai/gameworks/downloads/papers/NVVL/Fast_Flexible_Physically-Based_Volumetric_Light_Scattering.pdf)
 - [Improved Scattering](https://www.shadertoy.com/view/XlBSRz)
 - [Shadow Mapping](http://www.chinedufn.com/webgl-shadow-mapping-tutorial/)
-- [Uncharted 2 Tonemapping](http://filmicworlds.com/blog/filmic-tonemapping-operators/)
+- [Tone Mapping](https://www.shadertoy.com/view/lslGzl) by Zavie
+- [Uncharted Tone Mapping](http://filmicworlds.com/blog/filmic-tonemapping-operators/) by John Hable
+- [Blinn-phong shading](https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model)

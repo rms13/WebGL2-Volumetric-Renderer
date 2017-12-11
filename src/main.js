@@ -63,7 +63,7 @@ function setRenderer(renderer) {
 //gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
 
 var volFolder = gui.addFolder('Volume Controls');
-volFolder.add(params, 'Heterogenous');
+volFolder.add(params, 'Heterogenous').name('Heterogeneous');
 volFolder.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
 volFolder.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 volFolder.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
@@ -73,7 +73,8 @@ var toneMapFolder = gui.addFolder('Tonemapping, Exposure, Lights');
 toneMapFolder.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
 toneMapFolder.add(params, 'Exposure', -5.0, 5.0);
 toneMapFolder.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
-var dirLight = toneMapFolder.addFolder('Directional Light');
+
+var dirLight = gui.addFolder('Directional Light');
 var dirLightPositions = dirLight.addFolder('Position');
 dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
@@ -119,11 +120,8 @@ camera.position.set(-10, 8, 0);
 cameraControls.target.set(0, 2, 0);
 gl.enable(gl.DEPTH_TEST);
 
-var perf = 0;
-var perfcount = 0
 function render() {
-  scene.update(params.Intensity);
-  var t0 = performance.now();
+  scene.update(params.Intensity)
   params._renderer.render(camera, scene, 
     // Debug
     params.DebugVolume,

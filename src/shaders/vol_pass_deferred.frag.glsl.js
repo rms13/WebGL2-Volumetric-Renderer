@@ -35,6 +35,7 @@ export default function(params) {
   uniform mat4 u_invTranspVolTransMat;
 
   uniform float u_density;
+  uniform vec3 u_dirLightCol;
 
   out vec4 out_Color;
 
@@ -158,7 +159,7 @@ export default function(params) {
     float visibility  = (shadowCoord.z > depth+0.005)? 0.3 : 1.0;
     // out_Color = vec4(shadowCoord, 1.0);
     float dotprod     = dot(lightDir.xyz, nor);
-    vec3 albedo       = col * sunCol * max(dotprod, 0.05);
+    vec3 albedo       = col * u_dirLightCol * max(dotprod, 0.05);
     // out_Color      = vec4(albedo * visibility, 1.0);    
 
     return visibility;
@@ -311,7 +312,7 @@ export default function(params) {
       }
       // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
 
-      vec3 Li = sunCol;
+      vec3 Li = u_dirLightCol;
       #define USESHADOW 
       #ifdef USESHADOW
         float shadow = shadowMap(p.xyz - u_volTransMat[3].xyz, normal, albedo);

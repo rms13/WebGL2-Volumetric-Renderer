@@ -19,7 +19,7 @@ const params = {
   Light1PosY: 0.0,
   Light1PosZ: 0.0,
 
-  Light2Color: [ 1, 0, 0 ],
+  Light2Color: [ 255, 0, 0 ],
   Light2Intensity: 1,
   Light2PosX: 0.0,
   Light2PosZ: 0.0,
@@ -40,6 +40,7 @@ const params = {
   Interpolation: 0,
   DirLightPosX: 0.5,
   DirLightPosZ: 0.5,
+  DirLightCol: [125, 125, 125],
   
   DebugVolume: false,
   DebugShadow: false,
@@ -65,12 +66,14 @@ function setRenderer(renderer) {
 
 gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
 
-var dirLightPositions = gui.addFolder('Directional Light Position');
+var dirLight = gui.addFolder('Directional Light');
+var dirLightPositions = dirLight.addFolder('Position');
 gui.add(params, 'Heterogenous');
 gui.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
 gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 gui.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
+dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
 dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
 
@@ -127,7 +130,7 @@ function render() {
     params.VolumeScaleX, params.VolumeScaleY, params.VolumeScaleZ,
     // General
     params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation, params.AltFrame,
-    params.DirLightPosX, params.DirLightPosZ);
+    params.DirLightPosX, params.DirLightPosZ, params.DirLightCol);
 }
 
 makeRenderLoop(render)();

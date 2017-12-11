@@ -28,7 +28,8 @@ export default function(params) {
   
   uniform int u_debugVolume;
   uniform int u_debugShadow;
-
+  uniform vec3 u_dirLightCol;
+  
   uniform float u_upscaleFactor;
 
   uniform float u_screenW;
@@ -72,7 +73,7 @@ export default function(params) {
     float visibility  = (shadowCoord.z > depth + 0.005)? 0.1 : 1.0;
     // out_Color = vec4(shadowCoord, 1.0);
     float dotprod     = dot(lightDir.xyz, nor);
-    vec3 albedo       = col * sunCol * max(dotprod, 0.05);
+    vec3 albedo       = col * u_dirLightCol * max(dotprod, 0.05);
     // out_Color      = vec4(albedo * visibility, 1.0);    
 
     // return albedo * visibility;
@@ -97,7 +98,7 @@ export default function(params) {
     float visibility  = (shadowCoord.z > depth + 0.005)? 0.1 : 1.0;
     // out_Color = vec4(shadowCoord, 1.0);
     float dotprod     = dot(lightDir.xyz, nor);
-    vec3 albedo       = col * sunCol * max(dotprod, 0.05);
+    vec3 albedo       = col * u_dirLightCol * max(dotprod, 0.05);
 
     return albedo * visibility;
   }
@@ -182,7 +183,7 @@ export default function(params) {
     // DIRECTIONAL LIGHT - SUN
     vec3 sunDir = normalize(vec3(1.0, 0.5, 1.0));
     vec3 sunCol = 0.1 * vec3(0.5, 0.5, 0.4);
-    fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
+    fragColor += albedo * u_dirLightCol * max(dot(sunDir, normal), 0.05);
 
   #define USESHADOW 
   #ifdef USESHADOW

@@ -85,7 +85,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_shadowMap',
                   'u_density',
                   'u_dirLightCol'
-                  /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
     });
@@ -128,7 +127,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
                   'u_debugVolume',
                   'u_density',
                   'u_dirLightCol'
-                  /*'u_volPos', 'u_volOrient'*/
                 ],
       attribs:  ['a_position']
     });
@@ -220,11 +218,9 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightViewProjectionMatrix   = mat4.create();
     this._lightProjectionMatrix       = mat4.create();
     this._lightViewMatrix             = mat4.create();
-    mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 200);
+    mat4.ortho(this._lightProjectionMatrix, -20, 20, -20, 20, -20.0, 20);
     mat4.lookAt(this._lightViewMatrix, vec3.fromValues(.5,4,.5), vec3.fromValues(0,0,0), vec3.fromValues(0,1,0));
     mat4.multiply(this._lightViewProjectionMatrix, this._lightProjectionMatrix, this._lightViewMatrix);
-    // mat4.perspective(this._lightViewProjectionMatrix, 70.0, 1, 1.0, 200.0);
-    // mat4.lookAt(this._lightViewProjectionMatrix, dirLightPos, vec3.fromValues(0.0,0.0,0.0), vec3.fromValues(0.0,1.0,0.0));
 
     this.first = true;
     this.renVol = true;
@@ -288,7 +284,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     // Create, bind, and store "color" target textures for the FBO
     this._gbuffers = new Array(NUM_GBUFFERS);
-    //let attachments = new Array(NUM_GBUFFERS);
 
     this._gbuffers[0] = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, this._gbuffers[0]);
@@ -324,8 +319,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       throw "Framebuffer incomplete";
     }
 
-    // Tell the WEBGL_draw_buffers extension which FBO attachments are
-    // being used. (This extension allows for multiple render targets.)
     gl.drawBuffers([
       gl.COLOR_ATTACHMENT0,
       gl.COLOR_ATTACHMENT1,
@@ -334,19 +327,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
 
     // Volume Pass..
     this._volPassTex = gl.createTexture();
-    // var img = new Uint8Array(width * height);
-    // for (var k = 0; k < width; ++k) {
-    //   for (var j = 0; j < height; ++j) {
-    //     this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = 0;//Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
-    //   }
-    // }
-    //this._volPassTex.generateMipmaps = false;
-    // this._volPassTex.minFilter = THREE.LinearFilter;
-    // this._volPassTex.magFilter = THREE.LinearFilter;
-    //gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
@@ -398,19 +379,14 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       for (var j = 0; j < this.SIZE; ++j) {
         for (var i = 0; i < this.SIZE; ++i) {
           let density = 255.0 * Math.random();
-          // if(heterogenous) {
-          //   density *= Math.random();
-          // }
-
           this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = density;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
         }
       }
     }
 
-    // var volPos = vec3.fromValues(0, -4, 0); // position of the volume
     var volPos = pos; // position of the volume
     var volScale = vec3.fromValues(1,1,1); // scale of the volume
-    var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
+    var volOrient = quat.create();
     quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
 
     this.volTransMat = mat4.create();
@@ -427,21 +403,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAX_LEVEL, Math.log2(this.SIZE));
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texImage3D(
-      gl.TEXTURE_3D,  // target
-      0,              // level
-      gl.R8,        // internalformat
-      this.SIZE,           // width
-      this.SIZE,           // height
-      this.SIZE,           // depth
-      0,              // border
-      gl.RED,         // format
-      gl.UNSIGNED_BYTE,       // type
-      this.data            // pixel
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, this.SIZE, this.SIZE, this.SIZE,
+      0, gl.RED, gl.UNSIGNED_BYTE, this.data
     );
     gl.generateMipmap(gl.TEXTURE_3D);
     gl.bindTexture(gl.TEXTURE_3D, null);
-    // gl.uniform1i(this._shaderProgram.u_volBuffer, 0);
     // END: CREATE 3D-TEXTURE
   }
 
@@ -518,12 +484,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniformMatrix4fv(this._progShadowMap.u_viewProjectionMatrix, false, this._lightViewProjectionMatrix);
     gl.uniform1i(this._progShadowMap.u_debugShadow, debugShadow);
 
-    
     scene.draw(this._progShadowMap);
-
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    // renderFullscreenQuad(this._progShadowMap);
-
 
 
     //--------------------------------------------------  
@@ -544,10 +505,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Draw the scene. This function takes the shader program so that the model's textures can be bound to the right inputs
     scene.draw(this._progCopy);
 
-    
-    // gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-    // renderFullscreenQuad(this._progShadowMap);
-
 
     for (let i = 0; i < NUM_LIGHTS; ++i) {
       this._lightTexture.buffer[this._lightTexture.bufferIndex(i, 0) + 0] = scene.lights[i].position[0];
@@ -563,10 +520,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     this._lightTexture.update();
 
     // Update the clusters for the frame
-    //if(this.first === true) {
-      this.updateClustersOptimized(camera, this._viewMatrix, scene);
-    //  this.first = false;
-    //}
+    this.updateClustersOptimized(camera, this._viewMatrix, scene);
 
     var volShaderProgram, finalShaderProgram;
     if(!sandboxMode) {
@@ -593,10 +547,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
       this.renVol != this.renVol;
     }
 
-
-
-
-
     if(this.renVol === true) {
       this.renderVolumePass(volShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
         light2Col, light2Intensity, light2PosX, light2PosZ,
@@ -604,8 +554,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         volScaleX, volScaleY, volScaleZ,
         upscaleFactor, heterogenous, scattering, absorption, density, dirLightCol);
     }
-    
-
     
     this.renderFinalPass(finalShaderProgram, debugVolume, debugShadow, camera, light1Col, light1Intensity, light1PosY, light1PosZ,
       light2Col, light2Intensity, light2PosX, light2PosZ,
@@ -619,7 +567,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   updateVolume(upscaleFactor, heterogenous, pos, scale, orient)
   {
     gl.deleteTexture(this._volBuffer);
-    // CREATE AND BING THE 3D-TEXTURE
+    // CREATE AND BIND THE 3D-TEXTURE
     // reference: http://www.realtimerendering.com/blog/webgl-2-new-features/
     this.SIZE = 64;
     var max = this.SIZE + this.SIZE*this.SIZE + this.SIZE*this.SIZE*this.SIZE;
@@ -631,16 +579,14 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
           if(heterogenous) {
             density *= Math.random();
           }
-
           this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = density;
         }
       }
     }
 
-    // var volPos = vec3.fromValues(0, -4, 0); // position of the volume
     var volPos = pos; // position of the volume
     var volScale = vec3.fromValues(1,1,1); // scale of the volume
-    var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
+    var volOrient = quat.create();
     quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
 
     this.volTransMat = mat4.create();
@@ -657,21 +603,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAX_LEVEL, Math.log2(this.SIZE));
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
     gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texImage3D(
-      gl.TEXTURE_3D,  // target
-      0,              // level
-      gl.R8,        // internalformat
-      this.SIZE,           // width
-      this.SIZE,           // height
-      this.SIZE,           // depth
-      0,              // border
-      gl.RED,         // format
-      gl.UNSIGNED_BYTE,       // type
-      this.data            // pixel
+    gl.texImage3D(gl.TEXTURE_3D, 0, gl.R8, this.SIZE, this.SIZE, this.SIZE,
+      0, gl.RED, gl.UNSIGNED_BYTE, this.data
     );
     gl.generateMipmap(gl.TEXTURE_3D);
     gl.bindTexture(gl.TEXTURE_3D, null);
-    // gl.uniform1i(this._shaderProgram.u_volBuffer, 0);
     // END: CREATE 3D-TEXTURE
   }
 
@@ -684,7 +620,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     // Update Volume Properties
     var volPos    = vec3.fromValues(volPosX, volPosY, volPosZ); // position of the volume
     var volScale  = vec3.fromValues(volScaleX, volScaleY, volScaleZ); // scale of the volume
-    var volOrient = quat.create(); // [0, 45 * Math.PI/180, 0];
+    var volOrient = quat.create();
     quat.fromEuler(volOrient, 0.0, 0.0, 0.0);
 
     mat4.fromRotationTranslationScale(this.volTransMat, volOrient, volPos, volScale);
@@ -733,7 +669,6 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     gl.uniform1f(shaderProgram.u_light2PosZ, light2PosZ);
     
     gl.uniform1f(shaderProgram.u_volSize, this.SIZE);
-    // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
     gl.uniformMatrix4fv(shaderProgram.u_volTransMat, false, this.volTransMat);
     gl.uniformMatrix4fv(shaderProgram.u_viewProjectionMatrix, false, this._viewProjectionMatrix);
     gl.uniformMatrix4fv(shaderProgram.u_lightViewProjectionMatrix, false, this._lightViewProjectionMatrix);
@@ -807,23 +742,11 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
     
     gl.uniform1f(shaderProgram.u_volSize, this.SIZE);
     gl.uniform1f(shaderProgram.u_upscaleFactor, 1 / Math.sqrt(upscaleFactor));
-    // gl.uniform3f(this._progShade.u_volPos, this.volPos[0], this.volPos[1], this.volPos[2]);
     gl.uniformMatrix4fv(shaderProgram.u_volTransMat, false, this.volTransMat);
     gl.uniformMatrix4fv(shaderProgram.u_invVolTransMat, false, this.invVolTransMat);
     gl.uniformMatrix4fv(shaderProgram.u_invTranspVolTransMat, false, this.invTranspVolTransMat);
 
-    // if(this.framenum === undefined) this.framenum = 0.0;
-    // this.framenum+=0.05;
     gl.uniform1f(shaderProgram.u_time, this.framenum);
-    // if(this.t0 === undefined) {
-    //   this.t0 = performance.now();
-    //   gl.uniform1f(this._progShade.u_time, 0);
-    // }
-    // else {
-    //   t1 = performance.now();
-    //   gl.uniform1f(this._progShade.u_time, t1 - t0);
-    // }
-    // this.t0 = this.t1;
 
     // Bind g-buffers
     gl.activeTexture(gl.TEXTURE0);
@@ -870,19 +793,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
   {
     // Volume Pass..
     this._volPassTex = gl.createTexture();
-    // var img = new Uint8Array(width * height);
-    // for (var k = 0; k < width; ++k) {
-    //   for (var j = 0; j < height; ++j) {
-    //     this.data[i + j * this.SIZE + k * this.SIZE * this.SIZE] = 0;//Math.random() * 255.0;//(i + j * this.SIZE + k * this.SIZE * this.SIZE) / max * 255.0;//Math.random() * 255.0; // snoise([i, j, k]) * 256;
-    //   }
-    // }
-    //this._volPassTex.generateMipmaps = false;
-    // this._volPassTex.minFilter = THREE.LinearFilter;
-    // this._volPassTex.magFilter = THREE.LinearFilter;
-    //gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, this._volPassTex);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-    // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
     var interpolationMethod;
     if(interpolation == LINEAR) {
       interpolationMethod = gl.LINEAR;

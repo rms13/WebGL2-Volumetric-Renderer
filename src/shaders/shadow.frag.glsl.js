@@ -26,9 +26,7 @@ void main() {
     rgbaDepth -= rgbaDepth.gbaa * bitShift;
 
     // Store the depth into the shadow map
-    // out_Color = rgbaDepth;
     out_Color = vec4(gl_FragCoord.z, 0.0,0.0,1.0);
-    // out_Color = vec4(1.0, 0.0, 0.0, 1.0);
 }
 `;
 }

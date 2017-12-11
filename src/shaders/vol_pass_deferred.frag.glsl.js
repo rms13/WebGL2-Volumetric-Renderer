@@ -29,7 +29,6 @@ export default function(params) {
 
   uniform float u_time;
   uniform float u_volSize;
-  //uniform vec3 u_volPos;
   uniform mat4 u_volTransMat;
   uniform mat4 u_invVolTransMat;
   uniform mat4 u_invTranspVolTransMat;
@@ -38,11 +37,6 @@ export default function(params) {
   uniform vec3 u_dirLightCol;
 
   out vec4 out_Color;
-
-  #define ABSORBTION 0.006
-  #define SCATTERING 0.009
-  #define EXTINCTION ABSORBTION + SCATTERING
-  #define DENSITY 0.5
   #define PI 3.14159265
 
   #define NUM_STEPS 100
@@ -141,7 +135,7 @@ export default function(params) {
     return vec2(tNear, tFar);
   }
 
-  float shadowMap(vec3 pos, vec3 nor, vec3 col)
+  float shadowMap(vec3 pos)
   {
     vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
     vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(pos, 1.0);
@@ -150,41 +144,13 @@ export default function(params) {
 
     // Get the light direction from the point to the light
     vec4 lightDir     = normalize(vec4(0.0,0.0,0.0,1.0) - lightPosition);
-    // vec4 lightDir     = normalize(position - lightPosition);
     vec3 shadowCoord  = (lightPosition.xyz / lightPosition.w) / 2.0 + 0.5;
 
     vec3 sunCol       = vec3(0.5, 0.5, 0.4);
     vec4 rgbaDepth    = texture(u_shadowMap, shadowCoord.xy);
     float depth       = rgbaDepth.r; // Retrieve the z-value from R
-    float visibility  = (shadowCoord.z > depth+0.005)? 0.3 : 1.0;
-    // out_Color = vec4(shadowCoord, 1.0);
-    float dotprod     = dot(lightDir.xyz, nor);
-    vec3 albedo       = col * u_dirLightCol * max(dotprod, 0.05);
-    // out_Color      = vec4(albedo * visibility, 1.0);    
-
+    float visibility  = (shadowCoord.z > depth+0.005)? 0.3 : 1.0;  
     return visibility;
-  }
-
-  float volumetricShadow(in vec3 from, in vec3 to, in float tNear, in float tFar)
-  {
-    const float numStep = 16.0; // quality control. Bump to avoid shadow alisaing
-    float shadow = 1.0;
-    float muS = 0.0;
-    float muE = 0.0;
-    float muA = 0.05;
-    float dd = length(to-from) / numStep;
-    for(float s=0.5; s<(numStep-0.1); s+=1.0)// start at 0.5 to sample at center of integral part
-    {
-        vec3 pos = from + (to - from) * (s / (numStep));
-        // getParticipatingMedia(muS, muE, pos);
-        
-        muS = s > tNear && s < tFar ? 0.5 : 0.02;
-        muE = max(0.0000001, muA + muS);
-
-        shadow *= exp(-muE * dd);
-    }
-
-    return shadow;
   }
 
   void main() 
@@ -195,33 +161,9 @@ export default function(params) {
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
     vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
-    
-    
-    //albedo = vec3(0.98,0.98,0.98);
 
     vec3 fragColor = vec3(0.0);
-
-    // DIRECTIONAL LIGHT - SUN
-    vec3 sunDir = normalize(vec3(0.5, 4, 0.5));
-    vec3 sunCol = vec3(1.0, 1.0, 0.8);
-    // fragColor += albedo * sunCol * max(dot(sunDir, normal), 0.05);
-
-    //vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
-
-    // //point light
-    // vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
-    // // vec3 lightPos = vec3(0.0, 3.0, 0.0);
-    // // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
-    // // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
-    // vec3 lightCol = 1000.0 * vec3(0.0, 0.0, 1.0);
-
-    // vec3 lightPos2 = vec3(2.0 * 1.0 * sin(u_time * 0.5), 0.0, 0.0);
-    // // vec3 lightPos = vec3(0.0, 3.0, 0.0);
-    // // vec3 lightCol = 100.0 * vec3(1.0,0.0,0.0);
-    // // vec3 lightCol = 100.0 * vec3(0.9, 0.8, 0.4);
-    // vec3 lightCol2 = 1000.0 * vec3(1.0, 0.0, 0.0);
     
-    //-- Naive Volumetric Ray March
     // Make a ray from the camera to the point in world space.
     vec3 rayOrigin    = u_camPos;
     vec3 rayDirection = (v_position - rayOrigin);
@@ -257,7 +199,6 @@ export default function(params) {
       p = rayOriginVol + (i * rayDirectionVol);
       pWorld = (u_invVolTransMat * vec4(p.xyz, 1.0));//rayOrigin + i * rayDirection;
       pWorld /= pWorld.w;
-      // vec2 pUv = pWorld.xy * 0.5 + 0.5;
 
       // add fog value to muS..
       vec3 p1 = p.xyz;
@@ -266,56 +207,19 @@ export default function(params) {
       muS = i>tNear && i<tFar ? den * u_density: 0.02;
       muE = max(0.0000001, muA + muS);
 
-      // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..
-
-      // ivec3 clusterPos = ivec3(
-      //   int(pUv.x / u_screenW * float(${params.xSlices})),
-      //   int(pUv.y / u_screenH * float(${params.ySlices})),
-      //   int((-(u_viewMatrix * vec4(pWorld,1.0)).z - u_camN) / (u_camF - u_camN) * float(${params.zSlices}))
-      // );
-
-      // int clusterIdx = clusterPos.x + clusterPos.y * ${params.xSlices} + clusterPos.z * ${params.xSlices} * ${params.ySlices};
-      // int clusterWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
-      // int clusterHeight = int(float(${params.maxLights}+1) / 4.0) + 1;
-      // float clusterU = float(clusterIdx + 1) / float(clusterWidth + 1); // like u in UnpackLight()..
-
-      // int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
-
       vec3 scat = vec3(0.0);// = muS * Li * phaseFunction();
 
       for (int j = 0; j < ${params.numLights}; j++) {
-        // if(j >= numLights) {
-        //   break;
-        // }
-
-        // int clusterPixel = int(float(j+1) / 4.0);
-        // float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
-        // vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
-        // int lightIdx;
-        // int clusterPixelComponent = (j+1) - (clusterPixel * 4);
-        // if (clusterPixelComponent == 0) {
-        //     lightIdx = int(texel[0]);
-        // } else if (clusterPixelComponent == 1) {
-        //     lightIdx = int(texel[1]);
-        // } else if (clusterPixelComponent == 2) {
-        //     lightIdx = int(texel[2]);
-        // } else if (clusterPixelComponent == 3) {
-        //     lightIdx = int(texel[3]);
-        // }
-
-        // shading
-        // Light light = UnpackLight(lightIdx);
         Light light = UnpackLight(j);
         vec3 L = (u_volTransMat * vec4(light.position, 1.0)).xyz - p;
         vec3 Li = 10.0 * light.color / dot(L, L);
         scat += muS * Li * phaseFunction();
       }
-      // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
 
       vec3 Li = u_dirLightCol;
       #define USESHADOW 
       #ifdef USESHADOW
-        float shadow = shadowMap(p.xyz - u_volTransMat[3].xyz, normal, albedo);
+        float shadow = shadowMap(p.xyz - u_volTransMat[3].xyz);
         scat += max(5.0 * shadow, 0.2) * muS * Li * phaseFunction();
       #else
         scat += muS * Li * phaseFunction();     

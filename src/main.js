@@ -1,11 +1,7 @@
 import { makeRenderLoop, camera, cameraControls, gui, sandboxGUI, gl, DEBUG } from './init';
-import ForwardRenderer from './renderers/forward';
-import ClusteredForwardPlusRenderer from './renderers/clusteredForwardPlus';
 import ClusteredDeferredRenderer from './renderers/clusteredDeferred';
 import Scene from './scene';
 
-const FORWARD = 'Forward';
-const CLUSTERED_FORWARD_PLUS = 'Clustered Forward+';
 const CLUSTERED_DEFFERED = 'Clustered Deferred';
 
 const params = {
@@ -61,6 +57,9 @@ function setRenderer(renderer) {
   }
 }
 
+// GUI:
+
+// Add new renderers like this:
 //gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
 
 var volFolder = gui.addFolder('Volume Controls');
@@ -70,7 +69,7 @@ volFolder.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
 volFolder.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
 volFolder.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
 
-var toneMapFolder = gui.addFolder('Tonemapping and Exposure');
+var toneMapFolder = gui.addFolder('Tonemapping, Exposure, Lights');
 toneMapFolder.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
 toneMapFolder.add(params, 'Exposure', -5.0, 5.0);
 toneMapFolder.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
@@ -79,18 +78,6 @@ var dirLightPositions = dirLight.addFolder('Position');
 dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
 dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
-
-
-// var dirLight = gui.addFolder('Directional Light');
-// var dirLightPositions = dirLight.addFolder('Position');
-// gui.add(params, 'Heterogenous');
-// gui.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
-// gui.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
-// gui.add(params, 'Exposure', -5.0, 5.0);
-// gui.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
-// dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
-// dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
-// dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
 
 var sandboxFolder = gui.addFolder('Sandbox Mode');
 sandboxFolder.add(params, 'SandboxMode').onChange(setRenderer);
@@ -119,8 +106,6 @@ volumeScaleFolder.add(params, 'VolumeScaleZ', 0.25, 4).onChange(setRenderer);
 volumeFolder.add(params, 'VolumePosX', -10, 10).onChange(setRenderer);
 volumeFolder.add(params, 'VolumePosY', -10, 10).onChange(setRenderer);
 volumeFolder.add(params, 'VolumePosZ', -10, 10).onChange(setRenderer);
-// volumeCoeffsFolder.add(params, 'Scattering', 0.25, 4).onChange(setRenderer);
-// volumeCoeffsFolder.add(params, 'Absorption', 0.25, 4).onChange(setRenderer);
 volumeFolder.close();
 
 var debugFolder = gui.addFolder('Debug');
@@ -129,7 +114,6 @@ debugFolder.add(params, 'DebugVolume').name('Volume Pass').onChange(setRenderer)
 
 const scene = new Scene();
 scene.loadGLTF('models/sponza/sponza.gltf');
-// scene.loadGLTF('models/box/box.gltf');
 
 camera.position.set(-10, 8, 0);
 cameraControls.target.set(0, 2, 0);
@@ -138,10 +122,6 @@ gl.enable(gl.DEPTH_TEST);
 var perf = 0;
 var perfcount = 0
 function render() {
-	// if(this.perf === undefined) {
- //      this.perf = 0;
- //      this.perfcount = 0;
- //    }
   scene.update(params.Intensity);
   var t0 = performance.now();
   params._renderer.render(camera, scene, 
@@ -158,13 +138,6 @@ function render() {
     params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation, 
     params.AltFrame, params.ToneMapType, params.Exposure,
     params.DirLightPosX, params.DirLightPosZ, params.DirLightCol);
-
-    var t1 = performance.now();
-    perfcount++;
-    perf += (t1-t0);
-    if(perfcount===100){
-      console.log(perf);
-    }
 }
 
 makeRenderLoop(render)();

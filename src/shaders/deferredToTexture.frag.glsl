@@ -25,12 +25,12 @@ void main() {
     vec3 norm = applyNormalMap(v_normal, vec3(texture(u_normap, v_uv)));
     vec3 col = vec3(texture(u_colmap, v_uv));
 
-    // TODO: populate your g buffer
     fragData[0] = vec4(v_position, 1.0);
     fragData[1] = vec4(col, 1.0);
     fragData[2] = vec4(norm, 1.0);
     
-    // save space using screen space normals
+    // Save space using screen space normals
+    // NOTE: THIS WOULD REQUIRE CHANGES IN CLUSTEREDDEFERRED.JS AND OTHER SHADERS..
     // https://computergraphics.stackexchange.com/questions/3942/screenspace-normals-creation-normal-maps-and-unpacking -> z = sqrt(1-x2-y2);
     // gl_FragData[0] = vec4(v_position, norm.x);
     // gl_FragData[1] = vec4(col, norm.y);

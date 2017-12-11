@@ -47,15 +47,10 @@ export default function(params) {
 
   out vec4 out_Color;
 
-  #define ABSORBTION 0.006
-  #define SCATTERING 0.009
-  #define EXTINCTION ABSORBTION + SCATTERING
-  #define DENSITY 0.5
   #define PI 3.14159265
-
   #define NUM_STEPS 100
   
-  float shadowMap(vec3 pos, vec3 nor, vec3 col)
+  float shadowMap(vec3 pos)
   {
     vec4 position       = u_viewProjectionMatrix * vec4(pos, 1.0);
     vec4 lightPosition  = u_lightViewProjectionMatrix * vec4(pos, 1.0);
@@ -64,19 +59,12 @@ export default function(params) {
 
     // Get the light direction from the point to the light
     vec4 lightDir     = normalize(vec4(0.0,0.0,0.0,1.0) - lightPosition);
-    // vec4 lightDir     = normalize(position - lightPosition);
     vec3 shadowCoord  = (lightPosition.xyz / lightPosition.w) / 2.0 + 0.5;
 
     vec3 sunCol       = vec3(0.5, 0.5, 0.4);
     vec4 rgbaDepth    = texture(u_shadowMap, shadowCoord.xy);
     float depth       = rgbaDepth.r; // Retrieve the z-value from R
     float visibility  = (shadowCoord.z > depth + 0.005)? 0.1 : 1.0;
-    // out_Color = vec4(shadowCoord, 1.0);
-    float dotprod     = dot(lightDir.xyz, nor);
-    vec3 albedo       = col * u_dirLightCol * max(dotprod, 0.05);
-    // out_Color      = vec4(albedo * visibility, 1.0);    
-
-    // return albedo * visibility;
     return visibility;
   }
 
@@ -89,14 +77,12 @@ export default function(params) {
 
     // Get the light direction from the point to the light
     vec4 lightDir     = normalize(vec4(0.0,0.0,0.0,1.0) - lightPosition);
-    // vec4 lightDir     = normalize(position - lightPosition);
     vec3 shadowCoord  = (lightPosition.xyz / lightPosition.w) / 2.0 + 0.5;
 
     vec3 sunCol       = vec3(0.5, 0.5, 0.4);
     vec4 rgbaDepth    = texture(u_shadowMap, shadowCoord.xy);
     float depth       = rgbaDepth.r; // Retrieve the z-value from R
     float visibility  = (shadowCoord.z > depth + 0.005)? 0.1 : 1.0;
-    // out_Color = vec4(shadowCoord, 1.0);
     float dotprod     = dot(lightDir.xyz, nor);
     vec3 albedo       = col * u_dirLightCol * max(dotprod, 0.05);
 
@@ -153,32 +139,11 @@ export default function(params) {
     vec3 v_position = texture(u_gbuffers[0], v_uv).xyz;
     vec3 albedo     = texture(u_gbuffers[1], v_uv).xyz;
     vec3 normal     = texture(u_gbuffers[2], v_uv).xyz;
-    float shadow     = shadowMap(v_position, normal, albedo);
+    float shadow     = shadowMap(v_position);
 
     vec4 lightPosition = u_lightViewProjectionMatrix * vec4(v_position, 1.0);
 
     vec3 fragColor = vec3(0.0, 0.0, 0.0);
-      
-    // // Point light
-    // vec3 lightPos = vec3(0.0, 2.0 * 1.0 * sin(u_time * 0.5) + 8.0, 0.0);
-    // // vec3 lightPos = vec3(0.0, 8.0, 0.0);
-    // vec3 lightCol = vec3(0.9, 0.8, 0.4);
-
-
-    // READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING..
-    
-    ivec3 clusterPos = ivec3(
-      int(gl_FragCoord.x / u_screenW * float(${params.xSlices})),
-      int(gl_FragCoord.y / u_screenH * float(${params.ySlices})),
-      int((-(u_viewMatrix * vec4(v_position,1.0)).z - u_camN) / (u_camF - u_camN) * float(${params.zSlices}))
-    );
-
-    int clusterIdx = clusterPos.x + clusterPos.y * ${params.xSlices} + clusterPos.z * ${params.xSlices} * ${params.ySlices};
-    int clusterWidth = ${params.xSlices} * ${params.ySlices} * ${params.zSlices};
-    int clusterHeight = int(float(${params.maxLights}+1) / 4.0) + 1;
-    float clusterU = float(clusterIdx + 1) / float(clusterWidth + 1); // like u in UnpackLight()..
-
-    int numLights = int(texture(u_clusterbuffer, vec2(clusterU, 0.0)).x); // clamp to max lights in scene if this misbehaves..
 
     // DIRECTIONAL LIGHT - SUN
     vec3 sunDir = normalize(vec3(1.0, 0.5, 1.0));
@@ -187,57 +152,8 @@ export default function(params) {
 
   #define USESHADOW 
   #ifdef USESHADOW
-    fragColor *= shadow;//* volumetricShadow(v_position, lightPosition);      
+    fragColor *= shadow;     
   #endif
-
-    //vec3 scat = vec3(0.0);// = muS * Li * phaseFunction();
-
-    // for (int j = 0; j < ${params.numLights}; j++) {
-    //   if(j >= numLights) {
-    //     break;
-    //   }
-
-    //   int clusterPixel = int(float(j+1) / 4.0);
-    //   float clusterV = float(clusterPixel+1) / float(clusterHeight+1);
-    //   vec4 texel = texture(u_clusterbuffer, vec2(clusterU, clusterV));
-    //   int lightIdx;
-    //   int clusterPixelComponent = (j+1) - (clusterPixel * 4);
-    //   if (clusterPixelComponent == 0) {
-    //       lightIdx = int(texel[0]);
-    //   } else if (clusterPixelComponent == 1) {
-    //       lightIdx = int(texel[1]);
-    //   } else if (clusterPixelComponent == 2) {
-    //       lightIdx = int(texel[2]);
-    //   } else if (clusterPixelComponent == 3) {
-    //       lightIdx = int(texel[3]);
-    //   }
-
-    //   // shading
-    //   Light light = UnpackLight(lightIdx);
-    //   float lightDistance = distance(light.position, v_position);
-    //   vec3 L = (light.position - v_position) / lightDistance;
-
-    //   float lightIntensity = cubicGaussian(2.0 * lightDistance / light.radius);
-    //   float lambertTerm = max(dot(L, normal), 0.0);
-
-    //   float specular = 0.0;
-    //   // blinn-phong shading... https://en.wikipedia.org/wiki/Blinn%E2%80%93Phong_shading_model
-    //   vec3 viewDir = normalize(u_camPos - v_position);
-    //   vec3 halfDir = normalize(L + viewDir);
-    //   float specAngle = max(dot(halfDir, normal), 0.0);
-    //   specular = pow(specAngle, 100.0); // 100 -> shininess
-
-    //   fragColor += (albedo + vec3(specular)) * lambertTerm * light.color * vec3(lightIntensity);
-
-    //   // vec3 L = (u_volTransMat * vec4((light.position - v_position), 1.0)).xyz;
-    //   // float distL = length(L);
-    //   // vec3 lightDir = L / (distL);
-    //   // vec3 normalVol = (u_volTransMat * vec4(normal, 0.0)).xyz;
-    //   // vec3 Li = max(0.0, dot(normalVol, lightDir)) * light.color / (distL * distL);
-
-    //   //fragColor += (albedo / PI) * Li;
-    // }
-    // ..READ LIGHTS FROM CLUSTERS AND EVALUATE LIGHTING
 
 #define VOLUME
 #ifdef VOLUME
@@ -246,10 +162,6 @@ export default function(params) {
     fragColor += volTexSample00.xyz;
 #endif
 
-    // Gamma Correction
-    // fragColor = pow(fragColor, vec3(1.0 / 2.2));
-
-    //fragColor = vec3(float(clusterPos.z)/16.0);
     out_Color = vec4(fragColor.xyz, 1.0);
 
     // DEBUG VIEWS

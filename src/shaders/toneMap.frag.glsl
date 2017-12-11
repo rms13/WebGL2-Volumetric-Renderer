@@ -9,8 +9,6 @@ in vec2 v_uv;
 
 out vec4 LDROut;
 
-// float exposure = 1.0;
-
 void linear(inout vec3 color)
 {
 	color *= u_exposure;
@@ -40,6 +38,10 @@ void uncharted2ToneMapping(inout vec3 color)
 	color = pow(color, vec3(1.0/2.2));
 }
 
+
+// References:
+// https://www.shadertoy.com/view/lslGzl by Zavie
+// http://filmicworlds.com/blog/filmic-tonemapping-operators/ by John Hable
 void main()
 {
     vec3 texColor = vec3(texture(u_HDRTexture, v_uv));

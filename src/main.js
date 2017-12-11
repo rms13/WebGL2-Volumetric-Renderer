@@ -55,33 +55,42 @@ setRenderer(params.renderer);
 
 function setRenderer(renderer) {
   switch(renderer) {
-    case FORWARD:
-      params._renderer = new ForwardRenderer();
-      break;
-    case CLUSTERED_FORWARD_PLUS:
-      params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
-      break;
     case CLUSTERED_DEFFERED:
       params._renderer = new ClusteredDeferredRenderer(15, 15, 15);
       break;
   }
 }
 
-gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
+//gui.add(params, 'renderer', [FORWARD, CLUSTERED_FORWARD_PLUS, CLUSTERED_DEFFERED]).onChange(setRenderer);
 
-var dirLight = gui.addFolder('Directional Light');
+var volFolder = gui.addFolder('Volume Controls');
+volFolder.add(params, 'Heterogenous');
+volFolder.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
+volFolder.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
+volFolder.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
+volFolder.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
+
+var toneMapFolder = gui.addFolder('Tonemapping and Exposure');
+toneMapFolder.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
+toneMapFolder.add(params, 'Exposure', -5.0, 5.0);
+toneMapFolder.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
+var dirLight = toneMapFolder.addFolder('Directional Light');
 var dirLightPositions = dirLight.addFolder('Position');
-gui.add(params, 'Heterogenous');
-gui.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
-gui.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
-gui.add(params, 'Exposure', -5.0, 5.0);
-gui.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
-gui.add(params, 'UpscaleFactor', { '1': 1, '1/4': 4, '1/16': 16 });
-gui.add(params, 'Interpolation', { 'Linear': 0, 'Nearest': 1 });
-gui.add(params, 'AltFrame', { 'Every Frame': 0, 'Every two frames': 1 }).name('Render');
 dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
 dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
 dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
+
+
+// var dirLight = gui.addFolder('Directional Light');
+// var dirLightPositions = dirLight.addFolder('Position');
+// gui.add(params, 'Heterogenous');
+// gui.add(params, 'Density', 0, 0.5).name('Volume Density').onChange(setRenderer);
+// gui.add(params, 'ToneMapType', { 'Uncharted': 0, 'Reinhard': 1, 'Linear': 2});
+// gui.add(params, 'Exposure', -5.0, 5.0);
+// gui.add(params, 'Intensity', 0.2, 10.0).name('Light Intensity');
+// dirLight.addColor(params, 'DirLightCol').name('Color').onChange(setRenderer);
+// dirLightPositions.add(params, 'DirLightPosX', -5, 5).name('X');
+// dirLightPositions.add(params, 'DirLightPosZ', -2, 2).name('Z');
 
 var sandboxFolder = gui.addFolder('Sandbox Mode');
 sandboxFolder.add(params, 'SandboxMode').onChange(setRenderer);
@@ -103,7 +112,7 @@ light2Folder.add(params, 'Light2Intensity', 1, 30).name('Intensity').onChange(se
 light2Folder.close();
 
 var volumeFolder = sandboxFolder.addFolder('Volume Position');
-var volumeScaleFolder = sandboxFolder.addFolder('Scale');
+var volumeScaleFolder = sandboxFolder.addFolder('Volume Scale');
 volumeScaleFolder.add(params, 'VolumeScaleX', 0.25, 4).onChange(setRenderer);
 volumeScaleFolder.add(params, 'VolumeScaleY', 0.25, 4).onChange(setRenderer);
 volumeScaleFolder.add(params, 'VolumeScaleZ', 0.25, 4).onChange(setRenderer);

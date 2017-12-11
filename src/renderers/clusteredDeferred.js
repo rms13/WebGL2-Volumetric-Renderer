@@ -483,7 +483,7 @@ export default class ClusteredDeferredRenderer extends ClusteredRenderer {
         volScaleX, volScaleY, volScaleZ,
         upscaleFactor, heterogenous, scattering, absorption, density, interpolation, 
         altFrame, toneMapType, exposure,
-        dirLightX, dirLightZ)
+        dirLightX, dirLightZ, dirLightCol)
   {
     if (canvas.width != this._width || canvas.height != this._height) {
       this.resize(canvas.width, canvas.height);

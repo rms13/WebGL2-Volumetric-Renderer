@@ -137,7 +137,7 @@ function render() {
     // General
     params.UpscaleFactor, params.Heterogenous, params.Scattering, params.Absorption, params.Density, params.Interpolation, 
     params.AltFrame, params.ToneMapType, params.Exposure,
-    params.DirLightPosX, params.DirLightPosZ);
+    params.DirLightPosX, params.DirLightPosZ, params.DirLightCol);
 }
 
 makeRenderLoop(render)();
